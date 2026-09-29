@@ -1,18 +1,27 @@
 const mongoose = require('mongoose');
 
-const pointSchema = new mongoose.Schema({
-  address: { type: String, required: true },
-  latitude: { type: Number, required: true },
-  longitude: { type: Number, required: true }
+// GeoJSON Point Schema for 2dsphere indexing
+const geoPointSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    default: 'Point'
+  },
+  coordinates: {
+    type: [Number], // [longitude, latitude]
+    required: true
+  },
+  address: {
+    type: String,
+    required: true
+  }
 }, { _id: false });
 
 const passengerSchema = new mongoose.Schema({
   seekerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   seekerName: { type: String, default: 'Passenger' },
-  seekerPhone: { type: String, default: '' },
-  seekerGender: { type: String, default: 'unspecified' },
-  pickupPoint: { type: pointSchema, required: true },
-  dropPoint: { type: pointSchema, required: true },
+  pickupPoint: geoPointSchema,
+  dropPoint: geoPointSchema,
   status: { 
     type: String, 
     enum: ['booked', 'boarded', 'completed', 'cancelled'], 
@@ -21,27 +30,60 @@ const passengerSchema = new mongoose.Schema({
   seatCount: { type: Number, default: 1 },
   otp: { type: String, required: true },
   sharedDistanceKm: { type: Number, default: 0 },
-  fareBilled: { type: Number, default: 0 },
-  boardedAt: { type: Date },
-  droppedOffAt: { type: Date }
+  fareBilled: { type: Number, default: 0 }
 });
 
 const rideSchema = new mongoose.Schema({
-  driver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  origin: { type: pointSchema, required: true },
-  destination: { type: pointSchema, required: true },
-  waypoints: [pointSchema],
-  routePolyline: { type: String, default: '' },
-  departureTime: { type: Date, required: true },
-  totalSeats: { type: Number, required: true, default: 3 },
-  availableSeats: { type: Number, required: true, default: 3 },
-  pricePerKm: { type: Number, default: 5 }, // ₹5 or $5 per km
-  baseFare: { type: Number, default: 20 },
-  isWomenOnly: { type: Boolean, default: false },
+  driver: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  // GeoJSON Start Location for $near radius queries
+  startLocation: {
+    type: geoPointSchema,
+    required: true
+  },
+  // GeoJSON End Destination
+  endLocation: {
+    type: geoPointSchema,
+    required: true
+  },
+  mapboxPolyline: { 
+    type: String, 
+    default: '' 
+  },
+  waypoints: [geoPointSchema],
+  departureTime: { 
+    type: Date, 
+    required: true 
+  },
+  totalSeats: { 
+    type: Number, 
+    required: true, 
+    default: 3 
+  },
+  availableSeats: { 
+    type: Number, 
+    required: true, 
+    default: 3 
+  },
+  pricePerKm: { 
+    type: Number, 
+    default: 5 
+  },
+  baseFare: { 
+    type: Number, 
+    default: 20 
+  },
+  isWomenOnly: { 
+    type: Boolean, 
+    default: false 
+  },
   vehicle: {
-    plateNumber: { type: String, default: 'KA-01-MJ-8821' },
-    model: { type: String, default: 'Honda City' },
-    color: { type: String, default: 'Silver' }
+    plateNumber: { type: String, default: 'TN-01-AB-1234' },
+    model: { type: String, default: 'Hyundai i20' },
+    color: { type: String, default: 'White' }
   },
   activePassengers: [passengerSchema],
   status: { 
@@ -49,23 +91,14 @@ const rideSchema = new mongoose.Schema({
     enum: ['scheduled', 'locked', 'in_progress', 'completed', 'cancelled'], 
     default: 'scheduled' 
   },
-  liveTracking: {
-    currentLocation: {
-      latitude: { type: Number, default: 0 },
-      longitude: { type: Number, default: 0 }
-    },
-    isDeviated: { type: Boolean, default: false },
-    deviationKm: { type: Number, default: 0 },
-    sosTriggered: { type: Boolean, default: false },
-    sosTimestamp: { type: Date },
-    lastUpdated: { type: Date, default: Date.now }
-  },
-  settlement: {
-    totalRevenue: { type: Number, default: 0 },
-    co2SavedKg: { type: Number, default: 0 },
-    settledAt: { type: Date }
-  },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
+
+// CRITICAL: 2dsphere index for radius / $near geospatial matching
+rideSchema.index({ 'startLocation.coordinates': '2dsphere' });
+rideSchema.index({ 'endLocation.coordinates': '2dsphere' });
 
 module.exports = mongoose.model('Ride', rideSchema);

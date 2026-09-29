@@ -1,15 +1,37 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['driver', 'rider', 'both'], default: 'both' },
-  
-  // KYC & Demographics
+  name: { 
+    type: String, 
+    required: [true, 'Name is required'],
+    trim: true 
+  },
+  email: { 
+    type: String, 
+    required: [true, 'Email is required'], 
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+  },
+  password: { 
+    type: String, 
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters']
+  },
+  phone: { 
+    type: String, 
+    required: [true, 'Phone number is required'],
+    trim: true 
+  },
+  role: { 
+    type: String, 
+    enum: ['driver', 'rider', 'both'], 
+    default: 'both' 
+  },
   age: { 
     type: Number, 
-    min: [18, 'Age must be at least 18 years old'],
+    min: [18, 'Age must be 18 or above'], 
     default: 21 
   },
   gender: { 
@@ -17,44 +39,38 @@ const userSchema = new mongoose.Schema({
     enum: ['Male', 'Female', 'Other'], 
     default: 'Female' 
   },
-  phoneNumber: { 
-    type: String, 
-    default: '' 
-  },
   womenOnlyPool: { 
     type: Boolean, 
     default: false 
   },
-  
-  // Strict KYC Verification Details
   kycDetails: {
-    aadharHash: { type: String, default: null }, // SHA-256 Hashed (Never plain-text)
-    aadharLast4: { type: String, default: null }, // Masked format (e.g. ********1234)
+    aadharHash: { type: String, default: null },
+    aadharLast4: { type: String, default: null },
     isVerified: { type: Boolean, default: false },
     verifiedAt: { type: Date }
   },
-
-  // Automated Safety Profile & Auto-Ban System
+  rating: { 
+    type: Number, 
+    default: 5.0, 
+    min: 1.0, 
+    max: 5.0 
+  },
+  totalRatingsCount: { 
+    type: Number, 
+    default: 0 
+  },
   safetyProfile: {
     harassmentReports: { type: Number, default: 0 },
     accountStatus: { 
       type: String, 
       enum: ['Active', 'Suspended', 'Blocked'], 
       default: 'Active' 
-    },
-    blockedAt: { type: Date },
-    banReason: { type: String, default: '' }
+    }
   },
-
-  avatarUrl: { type: String, default: '' },
-  phone: { type: String, default: '' },
-  emergencyContact: {
-    name: { type: String, default: 'Emergency Contact' },
-    phone: { type: String, default: '+91-98765-43210' },
-    relation: { type: String, default: 'Family' }
-  },
-  rating: { type: Number, default: 5.0 },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
 module.exports = mongoose.model('User', userSchema);
