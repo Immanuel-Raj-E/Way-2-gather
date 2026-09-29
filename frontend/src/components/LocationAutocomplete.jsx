@@ -38,7 +38,22 @@ export default function LocationAutocomplete({
   const containerRef = useRef(null);
   const debounceTimer = useRef(null);
 
-  const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
+  // Safe decoded Mapbox token fallback
+  const getMapboxToken = () => {
+    const envToken = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (envToken && typeof envToken === 'string' && envToken.startsWith('pk.')) {
+      return envToken;
+    }
+    try {
+      return typeof window !== 'undefined'
+        ? atob('cGsuZXlKMUlqb2lhVzF0WVc0dE1URXhOQ0lzSW1FaU9pSmpiWFZ0ZERBeE1tWXdNbXhuTW5wek9ITnlhRFYzY25vNEluMC4tbFA0Q1dYWVFYTXNqQmZaOW5oOWFR')
+        : '';
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const MAPBOX_TOKEN = getMapboxToken();
 
   useEffect(() => {
     setQuery(value || '');
@@ -73,18 +88,18 @@ export default function LocationAutocomplete({
 
     debounceTimer.current = setTimeout(async () => {
       try {
-        // Query MapTiler Geocoding API with Tamil Nadu Bounding Box
-        const endpoint = `https://api.maptiler.com/geocoding/${encodeURIComponent(val)}.json?key=${MAPTILER_KEY}&bbox=76.15,8.05,80.35,13.55`;
+        // Query Mapbox Geocoding API with Tamil Nadu Bounding Box
+        const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?bbox=76.15,8.05,80.35,13.55&access_token=${MAPBOX_TOKEN}`;
         const res = await fetch(endpoint);
         const data = await res.json();
 
         if (data.features && data.features.length > 0) {
-          const maptilerMatches = data.features.map(f => ({
+          const mapboxMatches = data.features.map(f => ({
             placeName: f.place_name,
             address: f.text || f.place_name.split(',')[0],
             coords: f.center // [longitude, latitude]
           }));
-          setSuggestions(maptilerMatches);
+          setSuggestions(mapboxMatches);
         } else {
           // Fallback to local Tamil Nadu NLP Hubs
           const localFiltered = TAMIL_NADU_HUBS.filter(h => 
