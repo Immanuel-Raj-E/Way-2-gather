@@ -1,10 +1,11 @@
 import React from 'react';
 import { Routes, Route, Link, NavLink } from 'react-router-dom';
-import Home from './pages/Home';
+import FindRide from './pages/FindRide';
+import ActiveTrip from './pages/ActiveTrip';
 import CreateRide from './pages/CreateRide';
 import Dashboard from './pages/Dashboard';
 import { AuthProvider } from './context/AuthContext';
-import { Car, Compass, PlusCircle, LayoutDashboard } from 'lucide-react';
+import { Car, Navigation, PlusCircle, LayoutDashboard, Shield } from 'lucide-react';
 
 export default function App() {
   return (
@@ -20,6 +21,9 @@ export default function App() {
             <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Find Ride
             </NavLink>
+            <NavLink to="/active-trip" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              Active Trip (Live)
+            </NavLink>
             <NavLink to="/create-ride" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Offer Ride
             </NavLink>
@@ -32,7 +36,8 @@ export default function App() {
         {/* Main Routed Content */}
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<FindRide />} />
+            <Route path="/active-trip" element={<ActiveTrip />} />
             <Route path="/create-ride" element={<CreateRide />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>

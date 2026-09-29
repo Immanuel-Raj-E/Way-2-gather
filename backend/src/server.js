@@ -9,6 +9,7 @@ dotenv.config();
 
 const authRoutes = require('./routes/authRoutes');
 const rideRoutes = require('./routes/rideRoutes');
+const safetyRoutes = require('./routes/safetyRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -32,11 +33,13 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rides', rideRoutes);
+app.use('/api/safety', safetyRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     service: 'SyncRide Backend API',
+    features: ['WomenSafetyBarrier', 'PartialDropoffSeatEngine', 'DynamicCostSplit', 'LiveSOS'],
     websockets: 'active'
   });
 });

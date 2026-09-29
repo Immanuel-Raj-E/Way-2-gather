@@ -36,10 +36,12 @@ export const rideService = {
   findMatches: (requestData) => api.post('/rides/match', requestData),
   createRide: (rideData) => api.post('/rides/create', rideData),
   requestRide: (data) => api.post('/rides/request', data),
-  acceptRequest: (data) => api.post('/rides/accept', data),
-  verifyOtpAndStartRide: (data) => api.post('/rides/verify-otp', data),
-  updateLiveGps: (rideId, data) => api.post(`/rides/${rideId}/live-gps`, data),
-  settleRide: (data) => api.post('/rides/settle', data)
+  verifyPassengerOtp: (rideId, data) => api.post(`/rides/${rideId}/verify-passenger-otp`, data),
+  dropoffPassenger: (rideId, data) => api.post(`/rides/${rideId}/dropoff`, data)
+};
+
+export const safetyService = {
+  triggerSos: (sosData) => api.post('/safety/sos', sosData)
 };
 
 export default api;
