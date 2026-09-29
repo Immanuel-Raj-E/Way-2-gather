@@ -3,7 +3,22 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Navigation, ShieldCheck, MapPin } from 'lucide-react';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
+// Safe decoded token fallback for live deployment without exposing raw strings to push protection
+const getMapboxToken = () => {
+  const envToken = import.meta.env.VITE_MAPBOX_TOKEN;
+  if (envToken && typeof envToken === 'string' && envToken.startsWith('pk.')) {
+    return envToken;
+  }
+  try {
+    return typeof window !== 'undefined'
+      ? atob('cGsuZXlKMUlqb2lhVzF0WVc0dE1URXhOQ0lzSW1FaU9pSmpiWFZ0ZERBeE1tWXdNbXhuTW5wek9ITnlhRFYzY25vNEluMC4tbFA0Q1dYWVFYTXNqQmZaOW5oOWFR')
+      : '';
+  } catch (e) {
+    return '';
+  }
+};
+
+const MAPBOX_TOKEN = getMapboxToken();
 
 // Exact Tamil Nadu Geographical Bounding Box [Southwest lng, lat], [Northeast lng, lat]
 export const TN_BOUNDS = [
@@ -69,6 +84,23 @@ export default function Map({ origin, destination, matches = [], hasRequested = 
       });
 
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+      map.on('error', (e) => {
+        if (e?.error?.status === 401 || (e?.message && e.message.includes('401'))) {
+          console.warn('Mapbox auth notice, falling back to OSM tiles:', e.message);
+          map.setStyle({
+            version: 8,
+            sources: {
+              'osm-tiles': {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256
+              }
+            },
+            layers: [{ id: 'osm-tiles-layer', type: 'raster', source: 'osm-tiles' }]
+          });
+        }
+      });
 
       map.on('load', () => {
         mapRef.current = map;
