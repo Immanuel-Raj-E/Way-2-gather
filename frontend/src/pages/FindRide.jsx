@@ -8,7 +8,9 @@ import { Search, Compass, ShieldCheck, Zap, Shield, Filter, MapPin } from 'lucid
 
 export default function FindRide({ kycUser, onOpenKyc }) {
   const [pickup, setPickup] = useState('Chennai Central, Chennai');
+  const [pickupCoords, setPickupCoords] = useState([80.2707, 13.0827]);
   const [dropoff, setDropoff] = useState('Sholinganallur, OMR Corridor');
+  const [dropoffCoords, setDropoffCoords] = useState([80.2280, 12.8950]);
   const [preferredTime, setPreferredTime] = useState('');
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [womenOnly, setWomenOnly] = useState(false);
@@ -22,8 +24,8 @@ export default function FindRide({ kycUser, onOpenKyc }) {
     setHasSearched(true);
     try {
       const res = await rideService.findMatches({
-        origin: { address: pickup, latitude: 13.0827, longitude: 80.2707 },
-        destination: { address: dropoff, latitude: 12.8950, longitude: 80.2280 },
+        origin: { address: pickup, latitude: pickupCoords[1], longitude: pickupCoords[0] },
+        destination: { address: dropoff, latitude: dropoffCoords[1], longitude: dropoffCoords[0] },
         preferredTime: preferredTime || new Date().toISOString(),
         seatsNeeded: Number(seatsNeeded),
         womenOnly: Boolean(womenOnly)
@@ -41,8 +43,8 @@ export default function FindRide({ kycUser, onOpenKyc }) {
     try {
       const res = await rideService.requestRide({
         rideId: match.id || match._id,
-        origin: { address: pickup, latitude: 13.0827, longitude: 80.2707 },
-        destination: { address: dropoff, latitude: 12.8950, longitude: 80.2280 },
+        origin: { address: pickup, latitude: pickupCoords[1], longitude: pickupCoords[0] },
+        destination: { address: dropoff, latitude: dropoffCoords[1], longitude: dropoffCoords[0] },
         seatsNeeded: Number(seatsNeeded),
         seekerName: kycUser?.name || 'Verified Seeker'
       });
@@ -92,27 +94,35 @@ export default function FindRide({ kycUser, onOpenKyc }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
-                Pickup Location (Tamil Nadu)
+                Pickup Location (Tamil Nadu NLP)
               </label>
-              <input
-                type="text"
-                className="input-light"
+              <LocationAutocomplete
                 value={pickup}
-                onChange={(e) => setPickup(e.target.value)}
-                placeholder="Pickup address"
+                placeholder="Search pickup in Tamil Nadu..."
+                icon={MapPin}
+                iconColor="var(--primary)"
+                onChange={(val) => setPickup(val)}
+                onSelect={(loc) => {
+                  setPickup(loc.address);
+                  setPickupCoords([loc.longitude, loc.latitude]);
+                }}
               />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
-                Drop-off Destination
+                Drop-off Destination (Tamil Nadu NLP)
               </label>
-              <input
-                type="text"
-                className="input-light"
+              <LocationAutocomplete
                 value={dropoff}
-                onChange={(e) => setDropoff(e.target.value)}
-                placeholder="Destination address"
+                placeholder="Search destination in Tamil Nadu..."
+                icon={Compass}
+                iconColor="var(--accent-sky)"
+                onChange={(val) => setDropoff(val)}
+                onSelect={(loc) => {
+                  setDropoff(loc.address);
+                  setDropoffCoords([loc.longitude, loc.latitude]);
+                }}
               />
             </div>
 

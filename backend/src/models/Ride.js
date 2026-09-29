@@ -61,16 +61,20 @@ const rideSchema = new mongoose.Schema({
   totalSeats: { 
     type: Number, 
     required: true, 
+    min: [1, 'Must offer at least 1 seat'],
+    max: [6, 'Maximum allowed passenger seats is 6'],
     default: 3 
   },
   availableSeats: { 
     type: Number, 
     required: true, 
+    min: [0, 'Available seats cannot be negative'],
+    max: [6, 'Maximum allowed passenger seats is 6'],
     default: 3 
   },
   pricePerKm: { 
     type: Number, 
-    default: 5 
+    default: 10 // Fixed ₹10/km rate 
   },
   baseFare: { 
     type: Number, 

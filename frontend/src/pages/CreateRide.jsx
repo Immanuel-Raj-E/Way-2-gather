@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
 import { rideService } from '../services/api';
+import LocationAutocomplete from '../components/LocationAutocomplete';
 import Button from '../components/Button';
 import { PlusCircle, CheckCircle, Navigation, MapPin, Calendar, Users, Zap } from 'lucide-react';
+
+const getCurrentLocalDateTime = () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 16);
+};
 
 export default function CreateRide({ kycUser, onOpenKyc }) {
   const [formData, setFormData] = useState({
     originAddress: 'Chennai Central, Chennai',
+    originCoords: [80.2707, 13.0827],
     destAddress: 'Siruseri SIPCOT, OMR Corridor',
-    departureTime: '',
+    destCoords: [80.2220, 12.8310],
+    departureTime: getCurrentLocalDateTime(),
     totalSeats: 3,
     isWomenOnly: false
   });
@@ -24,17 +33,17 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
       await rideService.createRide({
         origin: { 
           address: formData.originAddress, 
-          latitude: 13.0827, 
-          longitude: 80.2707 
+          latitude: formData.originCoords[1], 
+          longitude: formData.originCoords[0] 
         },
         destination: { 
           address: formData.destAddress, 
-          latitude: 12.8310, 
-          longitude: 80.2220 
+          latitude: formData.destCoords[1], 
+          longitude: formData.destCoords[0] 
         },
-        departureTime: formData.departureTime || new Date(Date.now() + 3600000).toISOString(),
-        totalSeats: Number(formData.totalSeats),
-        availableSeats: Number(formData.totalSeats),
+        departureTime: formData.departureTime || new Date().toISOString(),
+        totalSeats: Math.min(6, Math.max(1, Number(formData.totalSeats))),
+        availableSeats: Math.min(6, Math.max(1, Number(formData.totalSeats))),
         pricePerKm: 10,
         isWomenOnly: Boolean(formData.isWomenOnly)
       });
@@ -84,44 +93,48 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Predictive Starting Point */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                Starting Point / Origin Address (Tamil Nadu)
+                Starting Point / Origin (Tamil Nadu Autocomplete)
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  required
-                  className="input-light"
-                  value={formData.originAddress}
-                  onChange={(e) => setFormData({ ...formData, originAddress: e.target.value })}
-                  style={{ paddingLeft: '2.4rem' }}
-                />
-                <MapPin size={16} color="var(--primary)" style={{ position: 'absolute', left: 12, top: 13 }} />
-              </div>
+              <LocationAutocomplete
+                value={formData.originAddress}
+                placeholder="Type pickup location (e.g. Chennai Central, Tambaram)"
+                icon={MapPin}
+                iconColor="var(--primary)"
+                onChange={(address) => setFormData(prev => ({ ...prev, originAddress: address }))}
+                onSelect={(loc) => setFormData(prev => ({
+                  ...prev,
+                  originAddress: loc.address,
+                  originCoords: [loc.longitude, loc.latitude]
+                }))}
+              />
             </div>
 
+            {/* Predictive Destination */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                Final Destination Address (Tamil Nadu)
+                Final Destination (Tamil Nadu Autocomplete)
               </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  required
-                  className="input-light"
-                  value={formData.destAddress}
-                  onChange={(e) => setFormData({ ...formData, destAddress: e.target.value })}
-                  style={{ paddingLeft: '2.4rem' }}
-                />
-                <Navigation size={16} color="var(--accent-sky)" style={{ position: 'absolute', left: 12, top: 13 }} />
-              </div>
+              <LocationAutocomplete
+                value={formData.destAddress}
+                placeholder="Type destination location (e.g. Siruseri SIPCOT, OMR)"
+                icon={Navigation}
+                iconColor="var(--accent-sky)"
+                onChange={(address) => setFormData(prev => ({ ...prev, destAddress: address }))}
+                onSelect={(loc) => setFormData(prev => ({
+                  ...prev,
+                  destAddress: loc.address,
+                  destCoords: [loc.longitude, loc.latitude]
+                }))}
+              />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Departure Time
+                  Departure Time (Defaults to Live Time)
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -135,7 +148,7 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Available Passenger Seats
+                  Passenger Seats (Max 6)
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -144,7 +157,7 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
                     max="6"
                     className="input-light"
                     value={formData.totalSeats}
-                    onChange={(e) => setFormData({ ...formData, totalSeats: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, totalSeats: Math.min(6, Math.max(1, Number(e.target.value))) })}
                     style={{ paddingLeft: '2.4rem' }}
                   />
                   <Users size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: 13 }} />
@@ -173,7 +186,7 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
                 Fixed P2P Rate: ₹10 per km
               </span>
               <span style={{ fontSize: '0.75rem', color: '#047857' }}>
-                Automated Fair Cost-Sharing
+                Automated Fair Cost-Sharing (Max 6 Seats)
               </span>
             </div>
 
