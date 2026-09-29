@@ -1,7 +1,7 @@
 {
-  "name": "syncride-backend",
+  "name": "way-2-gather-backend",
   "version": "1.0.0",
-  "description": "Node.js & Express API for SyncRide Ride-Pooling Platform with WebSockets and AI integration",
+  "description": "Node.js & Express API for way-2-gather Peer-to-Peer Carpooling Platform with WebSockets and AI integration",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

@@ -16,7 +16,7 @@ const verifyKyc = async (req, res, next) => {
     if (!parsedAge || parsedAge < 18) {
       return res.status(400).json({ 
         success: false, 
-        message: 'KYC Failed: You must be at least 18 years of age to register on SyncRide.' 
+        message: 'KYC Failed: You must be at least 18 years of age to register on way-2-gather.' 
       });
     }
 

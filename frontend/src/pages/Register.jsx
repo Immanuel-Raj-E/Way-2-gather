@@ -89,11 +89,11 @@ export default function Register() {
         gender: formData.gender,
         age: Number(formData.age),
         role: formData.role,
-        documentIdUrl: documentPreview || 'https://syncride.app/documents/verified_id.pdf'
+        documentIdUrl: documentPreview || 'https://way-2-gather.app/documents/verified_id.pdf'
       });
 
       if (res.data.token) {
-        localStorage.setItem('syncride_token', res.data.token);
+        localStorage.setItem('way2gather_token', res.data.token);
       }
       navigate('/dashboard');
     } catch (err) {

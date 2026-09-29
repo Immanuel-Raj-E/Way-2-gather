@@ -43,7 +43,7 @@ export default function Login() {
       });
 
       if (res.data.token) {
-        localStorage.setItem('syncride_token', res.data.token);
+        localStorage.setItem('way2gather_token', res.data.token);
       }
       navigate('/dashboard');
     } catch (err) {

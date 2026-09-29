@@ -108,7 +108,7 @@ export default function KYCModal({ isOpen, onClose, onVerified, initialData = {}
             </div>
 
             <Button onClick={onClose} style={{ width: '100%' }}>
-              Continue to SyncRide Dashboard
+              Continue to way-2-gather Dashboard
             </Button>
           </div>
         ) : (

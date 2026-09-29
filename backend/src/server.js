@@ -42,7 +42,7 @@ app.use('/api/reviews', reviewRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
-    service: 'SyncRide Backend API',
+    service: 'way-2-gather Backend API',
     features: [
       'MapboxLiveTripHandshake',
       'RealtimeLocationBroadcast',
@@ -50,7 +50,7 @@ app.get('/api/health', (req, res) => {
       'AutomatedHarassmentAutoBan', 
       'WomenSafetyBarrier', 
       'PartialDropoffSeatEngine', 
-      'DynamicCostSplit', 
+      'DynamicCostSplit_10_per_km', 
       'LiveSOS'
     ],
     websockets: 'active'
@@ -138,13 +138,13 @@ const startServer = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/syncride';
     await mongoose.connect(mongoUri);
-    console.log('[SyncRide Backend]: Connected to MongoDB successfully.');
+    console.log('[way-2-gather Backend]: Connected to MongoDB successfully.');
   } catch (err) {
-    console.warn('[SyncRide Backend]: MongoDB connection skipped/offline. Running in-memory.');
+    console.warn('[way-2-gather Backend]: MongoDB connection skipped/offline. Running in-memory.');
   }
 
   server.listen(PORT, () => {
-    console.log(`[SyncRide Backend]: Server + WebSockets running on http://localhost:${PORT}`);
+    console.log(`[way-2-gather Backend]: Server + WebSockets running on http://localhost:${PORT}`);
   });
 };
 

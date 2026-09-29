@@ -45,49 +45,49 @@ export function pointToSegmentDistanceKm(pLat, pLon, aLat, aLon, bLat, bLon) {
 
 export default function ActiveTrip({ rideData, onTripEnd }) {
   const ride = rideData || {
-    id: 'ride_active_demo_101',
+    id: 'ride_active_tn_101',
     driver: { name: 'Priya Sharma', phone: '+91-98765-43210', gender: 'female' },
-    vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City', color: 'Silver' },
-    origin: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
-    destination: { address: 'Electronic City Phase 1', latitude: 12.8450, longitude: 77.6600 },
+    vehicle: { plateNumber: 'TN-01-AB-8821', model: 'Honda City', color: 'White' },
+    origin: { address: 'Chennai Central, Chennai', latitude: 13.0827, longitude: 80.2707 },
+    destination: { address: 'Siruseri SIPCOT, OMR Corridor', latitude: 12.8310, longitude: 80.2220 },
     isWomenOnly: true,
-    pricePerKm: 5,
+    pricePerKm: 10,
     baseFare: 20,
     totalSeats: 3,
     availableSeats: 1,
     activePassengers: [
       {
         id: 'p1',
-        seekerName: 'Ananya (Partial Match)',
-        pickupPoint: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
-        dropPoint: { address: 'HSR Layout BDA Complex (10km mark)', latitude: 12.9120, longitude: 77.6380 },
+        seekerName: 'Ananya (Partial Corridor)',
+        pickupPoint: { address: 'Chennai Central', latitude: 13.0827, longitude: 80.2707 },
+        dropPoint: { address: 'Tidel Park, Tharamani', latitude: 12.9880, longitude: 80.2450 },
         status: 'boarded',
         otp: '4829',
-        sharedDistanceKm: 10.4,
+        sharedDistanceKm: 12.4,
         seatCount: 1
       },
       {
         id: 'p2',
         seekerName: 'Sneha (Full Corridor)',
-        pickupPoint: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
-        dropPoint: { address: 'Electronic City Phase 1', latitude: 12.8450, longitude: 77.6600 },
+        pickupPoint: { address: 'Chennai Central', latitude: 13.0827, longitude: 80.2707 },
+        dropPoint: { address: 'Siruseri SIPCOT, OMR Corridor', latitude: 12.8310, longitude: 80.2220 },
         status: 'boarded',
         otp: '9134',
-        sharedDistanceKm: 18.2,
+        sharedDistanceKm: 28.5,
         seatCount: 1
       }
     ]
   };
 
-  const rideId = ride.id || ride._id || 'ride_active_demo_101';
+  const rideId = ride.id || ride._id || 'ride_active_tn_101';
   const [passengers, setPassengers] = useState(ride.activePassengers || []);
   const [availableSeats, setAvailableSeats] = useState(ride.availableSeats ?? 1);
   const [shareSuccess, setShareSuccess] = useState(false);
 
   // GPS & Deviation State
-  const [currentGps, setCurrentGps] = useState({ latitude: 12.9340, longitude: 77.6280 });
+  const [currentGps, setCurrentGps] = useState({ latitude: 13.0827, longitude: 80.2707 });
   const [deviationKm, setDeviationKm] = useState(0.15);
-  const [etaMins, setEtaMins] = useState(24);
+  const [etaMins, setEtaMins] = useState(35);
   const [trafficDetourActive, setTrafficDetourActive] = useState(false);
 
   // SOS Modal State (> 1km for > 2 mins)
@@ -96,24 +96,25 @@ export default function ActiveTrip({ rideData, onTripEnd }) {
   const [sosDispatched, setSosDispatched] = useState(false);
   const deviationStartTime = useRef(null);
 
-  // Planned Corridor Polyline Points
+  // Planned Corridor Polyline Points (Tamil Nadu Corridor)
   const corridorWaypoints = [
-    { latitude: 12.9340, longitude: 77.6280 }, // Koramangala
-    { latitude: 12.9120, longitude: 77.6380 }, // HSR Layout
-    { latitude: 12.8890, longitude: 77.6490 }, // Silk Board Flyover
-    { latitude: 12.8450, longitude: 77.6600 }  // Electronic City
+    { latitude: 13.0827, longitude: 80.2707 }, // Chennai Central
+    { latitude: 13.0418, longitude: 80.2505 }, // Mount Road
+    { latitude: 12.9880, longitude: 80.2450 }, // Tidel Park
+    { latitude: 12.8950, longitude: 80.2280 }, // Sholinganallur
+    { latitude: 12.8310, longitude: 80.2220 }  // Siruseri
   ];
 
   // 1. Web Share API Handler
   const handleShareLiveStatus = async () => {
-    const shareText = `Track my SyncRide securely: https://syncride.app/track/${rideId} - Vehicle: ${ride.vehicle?.plateNumber || 'KA-01-MJ-8821'} (${ride.vehicle?.model || 'Sedan'}), Driver: ${ride.driver?.name || 'Verified Host'}`;
+    const shareText = `Track my way-2-gather carpool securely: https://way-2-gather.app/track/${rideId} - Vehicle: ${ride.vehicle?.plateNumber || 'TN-01-AB-8821'} (${ride.vehicle?.model || 'Sedan'}), Driver: ${ride.driver?.name || 'Verified Host'}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'My SyncRide Live Tracking',
+          title: 'My way-2-gather Live Tracking',
           text: shareText,
-          url: `https://syncride.app/track/${rideId}`
+          url: `https://way-2-gather.app/track/${rideId}`
         });
         setShareSuccess(true);
       } catch (err) {
@@ -317,12 +318,12 @@ export default function ActiveTrip({ rideData, onTripEnd }) {
       </div>
 
       {/* Passengers & Partial Drop-off Seat Management */}
-      <div className="glass-panel">
+      <div className="white-panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Passenger Roster & Dynamic Cost Split</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>Passenger Roster & Dynamic Cost Split</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Each passenger is strictly billed ₹5/km for their exact occupied segment. Early drop-offs free seats for the remaining corridor in real time.
+              Each passenger is strictly billed <b>₹10/km</b> for their exact occupied segment. Early drop-offs free seats for the remaining corridor in real time.
             </p>
           </div>
         </div>
@@ -330,38 +331,39 @@ export default function ActiveTrip({ rideData, onTripEnd }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {passengers.map((p, idx) => {
             const isCompleted = p.status === 'completed';
-            const fare = Math.round((20 + (p.sharedDistanceKm || 10) * 5) * 100) / 100;
+            const fare = Math.round(((p.sharedDistanceKm || 10) * 10) * 100) / 100;
 
             return (
               <div
                 key={p.id || idx}
                 style={{
-                  background: isCompleted ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.35)',
-                  border: isCompleted ? '1px dashed rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
+                  background: isCompleted ? '#f8fafc' : '#ffffff',
+                  border: isCompleted ? '1px dashed var(--border-color)' : '1px solid var(--border-color)',
                   padding: '1rem 1.25rem',
-                  borderRadius: 12,
+                  borderRadius: 10,
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   flexWrap: 'wrap',
-                  gap: '1rem'
+                  gap: '1rem',
+                  boxShadow: 'var(--shadow-sm)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{
                     width: 38, height: 38, borderRadius: '50%',
-                    background: isCompleted ? 'rgba(255,255,255,0.05)' : 'rgba(99, 102, 241, 0.15)',
+                    background: isCompleted ? '#f1f5f9' : 'var(--primary-light)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isCompleted ? 'var(--text-muted)' : 'var(--primary-light)',
+                    color: isCompleted ? 'var(--text-muted)' : 'var(--primary)',
                     fontWeight: 700
                   }}>
                     {idx + 1}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
                       {p.seekerName}
                       {isCompleted && (
-                        <span className="badge-tag" style={{ marginLeft: '0.5rem', color: 'var(--accent-green)' }}>
+                        <span className="badge-tag" style={{ marginLeft: '0.5rem', color: 'var(--primary)', background: 'var(--primary-light)' }}>
                           ✓ Dropped Off
                         </span>
                       )}
@@ -376,15 +378,15 @@ export default function ActiveTrip({ rideData, onTripEnd }) {
                   {/* OTP Badge */}
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Trip OTP</div>
-                    <div style={{ fontWeight: 800, color: 'var(--accent-cyan)', letterSpacing: '0.15em' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.15em' }}>
                       {p.otp || '5921'}
                     </div>
                   </div>
 
                   {/* Distance & Fare Split */}
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Segment ({p.sharedDistanceKm || 10.4} km @ ₹5/km)</div>
-                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent-green)' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Segment ({p.sharedDistanceKm || 12.4} km @ ₹10/km)</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
                       ₹{fare}
                     </div>
                   </div>

@@ -9,14 +9,14 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('syncride_token');
+      const token = localStorage.getItem('way2gather_token');
       if (token) {
         try {
           const res = await authService.getProfile();
           setUser(res.data.user);
         } catch (err) {
           console.warn('Auth token invalid or expired');
-          localStorage.removeItem('syncride_token');
+          localStorage.removeItem('way2gather_token');
         }
       }
       setLoading(false);
@@ -26,13 +26,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await authService.login({ email, password });
-    localStorage.setItem('syncride_token', res.data.token);
+    localStorage.setItem('way2gather_token', res.data.token);
     setUser(res.data.user);
     return res.data;
   };
 
   const logout = () => {
-    localStorage.removeItem('syncride_token');
+    localStorage.removeItem('way2gather_token');
     setUser(null);
   };
 

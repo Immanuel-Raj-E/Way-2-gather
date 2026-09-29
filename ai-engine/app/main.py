@@ -10,7 +10,7 @@ from app.api.tracking import router as tracking_router
 load_dotenv()
 
 app = FastAPI(
-    title="SyncRide AI Engine",
+    title="way-2-gather AI Engine",
     description="Ride-Pooling XGBoost Compatibility Prediction & Geospatial Corridor Engine",
     version="2.0.0"
 )
@@ -31,7 +31,7 @@ app.include_router(tracking_router, prefix="/api", tags=["Live Tracking & SOS"])
 def health_check():
     return {
         "status": "healthy",
-        "service": "SyncRide AI Engine",
+        "service": "way-2-gather AI Engine",
         "model": "XGBoost 6-Feature Acceptance Classifier",
         "features": [
             "detour_distance_km",
