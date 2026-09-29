@@ -1,14 +1,67 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { socket } from '../services/api';
 import Button from './Button';
 import { 
-  Car, User, Navigation, ShieldCheck, Phone, AlertCircle, 
+  Car, Navigation, ShieldCheck, Phone, AlertCircle, 
   RefreshCw, CheckCircle2, ArrowRight, Share2, Compass, Radio 
 } from 'lucide-react';
 
-const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
+
+// Helper: Fetch real driving road geometry via Mapbox Directions API (with OSRM fallback)
+async function fetchRoadRoute(start, end) {
+  if (!start || !end) return null;
+  const [startLng, startLat] = start;
+  const [endLng, endLat] = end;
+
+  // 1. Try Mapbox Directions API
+  try {
+    const mapboxUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetch(mapboxUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
+        return {
+          coordinates: data.routes[0].geometry.coordinates,
+          distanceKm: +(data.routes[0].distance / 1000).toFixed(1),
+          durationMins: Math.max(1, Math.round(data.routes[0].duration / 60))
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Mapbox directions error, attempting OSRM fallback:', err);
+  }
+
+  // 2. Fallback to Open Source Routing Machine (OSRM)
+  try {
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+    const res = await fetch(osrmUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.routes && data.routes.length > 0 && data.routes[0].geometry?.coordinates) {
+        return {
+          coordinates: data.routes[0].geometry.coordinates,
+          distanceKm: +(data.routes[0].distance / 1000).toFixed(1),
+          durationMins: Math.max(1, Math.round(data.routes[0].duration / 60))
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('OSRM routing fallback failed:', err);
+  }
+
+  // 3. Fallback straight line if both fail
+  const dLat = (end[1] - start[1]) * 111;
+  const dLng = (end[0] - start[0]) * 111 * Math.cos((start[1] * Math.PI) / 180);
+  const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+  return {
+    coordinates: [start, end],
+    distanceKm: Math.round(dist * 10) / 10,
+    durationMins: Math.max(1, Math.round(dist * 1.8))
+  };
+}
 
 export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTrip }) {
   const mapContainerRef = useRef(null);
@@ -20,27 +73,79 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
   const rideId = activeRide?.rideId || activeRide?.id || activeRide?._id || 'ride_demo_101';
   
   // Coordinates state: [lng, lat]
+  // Default to Chennai (Alandur / Guindy -> Sholinganallur / OMR)
   const [hostLocation, setHostLocation] = useState(
-    activeRide?.hostLocation || [77.6280, 12.9340] // Koramangala
+    activeRide?.hostLocation || [80.2050, 13.0060]
   );
   const [seekerLocation, setSeekerLocation] = useState(
-    activeRide?.seekerLocation || [77.6600, 12.8450] // Electronic City
+    activeRide?.seekerLocation || [80.2280, 12.8950]
   );
 
   const [currentRole, setCurrentRole] = useState(userRole);
   const [gpsStatus, setGpsStatus] = useState('prompt'); // 'prompt' | 'granted' | 'denied'
-  const [distanceKm, setDistanceKm] = useState(11.8);
-  const [etaMinutes, setEtaMinutes] = useState(18);
+  const [distanceKm, setDistanceKm] = useState(12.4);
+  const [etaMinutes, setEtaMinutes] = useState(25);
   const [isSimulatingApproach, setIsSimulatingApproach] = useState(false);
 
-  // 1. Initialize MapLibre GL JS Instance with MapTiler Dark Theme
+  // Road geometry waypoints state & refs
+  const [roadCoordinates, setRoadCoordinates] = useState([]);
+  const roadCoordinatesRef = useRef([]);
+  const simStepRef = useRef(0);
+  const totalRoadDistanceKmRef = useRef(12.4);
+
+  // Auto-Zoom / fitBounds Function
+  const fitBoundsBetweenMarkers = useCallback((mapInstance, hLoc, sLoc, routeCoords = null) => {
+    if (!mapInstance) return;
+
+    const bounds = new mapboxgl.LngLatBounds();
+    if (routeCoords && routeCoords.length > 0) {
+      routeCoords.forEach(pt => bounds.extend(pt));
+    } else {
+      bounds.extend(hLoc);
+      bounds.extend(sLoc);
+    }
+
+    mapInstance.fitBounds(bounds, {
+      padding: { top: 110, bottom: 140, left: 80, right: 80 },
+      maxZoom: 15,
+      duration: 1200
+    });
+  }, []);
+
+  // Update Road Route Geometry on Map
+  const loadRoadRoute = useCallback(async (start, end) => {
+    const route = await fetchRoadRoute(start, end);
+    if (!route || !route.coordinates) return;
+
+    setRoadCoordinates(route.coordinates);
+    roadCoordinatesRef.current = route.coordinates;
+    simStepRef.current = 0;
+    totalRoadDistanceKmRef.current = route.distanceKm;
+    setDistanceKm(route.distanceKm);
+    setEtaMinutes(route.durationMins);
+
+    if (mapRef.current && mapRef.current.getSource('route-line')) {
+      mapRef.current.getSource('route-line').setData({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: route.coordinates
+        }
+      });
+      fitBoundsBetweenMarkers(mapRef.current, start, end, route.coordinates);
+    }
+  }, [fitBoundsBetweenMarkers]);
+
+  // 1. Initialize Mapbox GL JS Instance with Dark Theme
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     try {
-      const map = new maplibregl.Map({
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+
+      const map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
+        style: 'mapbox://styles/mapbox/dark-v11',
         center: [
           (hostLocation[0] + seekerLocation[0]) / 2,
           (hostLocation[1] + seekerLocation[1]) / 2
@@ -49,77 +154,49 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
         attributionControl: false
       });
 
-      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
 
-      map.on('load', () => {
+      map.on('load', async () => {
         mapRef.current = map;
 
-        // Create Custom HTML Marker for Host (🚗)
-        const hostEl = document.createElement('div');
-        hostEl.className = 'host-marker-container';
-        hostEl.innerHTML = `
-          <div style="
-            background: linear-gradient(135deg, #6366f1, #4f46e5);
-            width: 44px; height: 44px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.8);
-            border: 2px solid white; cursor: pointer; transform: scale(1);
-          ">
-            <span style="font-size: 20px;">🚗</span>
-          </div>
-          <div style="
-            background: rgba(9, 13, 22, 0.85); color: #818cf8;
-            font-size: 11px; font-weight: 800; padding: 2px 8px;
-            border-radius: 9999px; margin-top: 4px; white-space: nowrap;
-            border: 1px solid rgba(99, 102, 241, 0.4); text-align: center;
-          ">
-            Host (Driver)
-          </div>
-        `;
+        // Fetch real road route geometry immediately
+        const initialRoute = await fetchRoadRoute(hostLocation, seekerLocation);
+        const initialCoords = initialRoute?.coordinates || [hostLocation, seekerLocation];
+        
+        if (initialRoute) {
+          setRoadCoordinates(initialCoords);
+          roadCoordinatesRef.current = initialCoords;
+          totalRoadDistanceKmRef.current = initialRoute.distanceKm;
+          setDistanceKm(initialRoute.distanceKm);
+          setEtaMinutes(initialRoute.durationMins);
+        }
 
-        hostMarkerRef.current = new maplibregl.Marker({ element: hostEl, anchor: 'center' })
-          .setLngLat(hostLocation)
-          .addTo(map);
-
-        // Create Custom HTML Marker for Seeker (🧍‍♂️)
-        const seekerEl = document.createElement('div');
-        seekerEl.className = 'seeker-marker-container';
-        seekerEl.innerHTML = `
-          <div style="
-            background: linear-gradient(135deg, #06b6d4, #0891b2);
-            width: 44px; height: 44px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.8);
-            border: 2px solid white; cursor: pointer;
-          ">
-            <span style="font-size: 20px;">🧍‍♂️</span>
-          </div>
-          <div style="
-            background: rgba(9, 13, 22, 0.85); color: #38bdf8;
-            font-size: 11px; font-weight: 800; padding: 2px 8px;
-            border-radius: 9999px; margin-top: 4px; white-space: nowrap;
-            border: 1px solid rgba(6, 182, 212, 0.4); text-align: center;
-          ">
-            Seeker (Pickup)
-          </div>
-        `;
-
-        seekerMarkerRef.current = new maplibregl.Marker({ element: seekerEl, anchor: 'center' })
-          .setLngLat(seekerLocation)
-          .addTo(map);
-
-        // Add Route Corridor Line Layer
+        // Add Road Route Corridor Line Source
         map.addSource('route-line', {
           type: 'geojson',
           data: {
             type: 'Feature',
             geometry: {
               type: 'LineString',
-              coordinates: [hostLocation, seekerLocation]
+              coordinates: initialCoords
             }
           }
         });
 
+        // 1. Glow / Casing Layer for Roads
+        map.addLayer({
+          id: 'route-line-casing',
+          type: 'line',
+          source: 'route-line',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#4f46e5',
+            'line-width': 8,
+            'line-opacity': 0.35
+          }
+        });
+
+        // 2. High-Visibility Road Path Layer
         map.addLayer({
           id: 'route-line-layer',
           type: 'line',
@@ -127,14 +204,67 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': '#818cf8',
-            'line-width': 4,
-            'line-dasharray': [2, 2],
-            'line-opacity': 0.85
+            'line-width': 4.5,
+            'line-opacity': 0.95
           }
         });
 
-        // Fit Bounds dynamically
-        fitBoundsBetweenMarkers(map, hostLocation, seekerLocation);
+        // Create Custom HTML Marker for Driver (Red)
+        const hostEl = document.createElement('div');
+        hostEl.className = 'host-marker-container';
+        hostEl.innerHTML = `
+          <div style="
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.85);
+            border: 2px solid white; cursor: pointer;
+          ">
+            <span style="font-size: 20px;">🚗</span>
+          </div>
+          <div style="
+            background: rgba(9, 13, 22, 0.9); color: #fca5a5;
+            font-size: 11px; font-weight: 800; padding: 2px 8px;
+            border-radius: 9999px; margin-top: 4px; white-space: nowrap;
+            border: 1px solid rgba(239, 68, 68, 0.6); text-align: center;
+          ">
+            Driver (Red)
+          </div>
+        `;
+
+        hostMarkerRef.current = new mapboxgl.Marker({ element: hostEl, anchor: 'center' })
+          .setLngLat(hostLocation)
+          .addTo(map);
+
+        // Create Custom HTML Marker for Seeker (Green)
+        const seekerEl = document.createElement('div');
+        seekerEl.className = 'seeker-marker-container';
+        seekerEl.innerHTML = `
+          <div style="
+            background: linear-gradient(135deg, #10b981, #059669);
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.85);
+            border: 2px solid white; cursor: pointer;
+          ">
+            <span style="font-size: 20px;">🟢</span>
+          </div>
+          <div style="
+            background: rgba(9, 13, 22, 0.9); color: #6ee7b7;
+            font-size: 11px; font-weight: 800; padding: 2px 8px;
+            border-radius: 9999px; margin-top: 4px; white-space: nowrap;
+            border: 1px solid rgba(16, 185, 129, 0.6); text-align: center;
+          ">
+            Seeker (Current Location)
+          </div>
+        `;
+
+        seekerMarkerRef.current = new mapboxgl.Marker({ element: seekerEl, anchor: 'center' })
+          .setLngLat(seekerLocation)
+          .addTo(map);
+
+        // Fit Bounds dynamically along entire road path
+        fitBoundsBetweenMarkers(map, hostLocation, seekerLocation, initialCoords);
       });
 
       // Cleanup
@@ -144,22 +274,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
     }
   }, []);
 
-  // 2. Auto-Zoom / fitBounds Function
-  const fitBoundsBetweenMarkers = (mapInstance, hLoc, sLoc) => {
-    if (!mapInstance) return;
-
-    const bounds = new maplibregl.LngLatBounds();
-    bounds.extend(hLoc);
-    bounds.extend(sLoc);
-
-    mapInstance.fitBounds(bounds, {
-      padding: { top: 100, bottom: 140, left: 80, right: 80 },
-      maxZoom: 15,
-      duration: 1200
-    });
-  };
-
-  // 3. Browser Geolocation API (watchPosition)
+  // 2. Browser Geolocation API (watchPosition)
   useEffect(() => {
     if ('geolocation' in navigator) {
       watchIdRef.current = navigator.geolocation.watchPosition(
@@ -169,22 +284,30 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
 
           if (currentRole === 'host') {
             setHostLocation(liveCoords);
+            if (hostMarkerRef.current) hostMarkerRef.current.setLngLat(liveCoords);
             socket.emit('location_update', {
               rideId,
               userRole: 'host',
               location: { lng: liveCoords[0], lat: liveCoords[1] }
             });
+            if (!isSimulatingApproach) {
+              loadRoadRoute(liveCoords, seekerLocation);
+            }
           } else {
             setSeekerLocation(liveCoords);
+            if (seekerMarkerRef.current) seekerMarkerRef.current.setLngLat(liveCoords);
             socket.emit('location_update', {
               rideId,
               userRole: 'seeker',
               location: { lng: liveCoords[0], lat: liveCoords[1] }
             });
+            if (!isSimulatingApproach) {
+              loadRoadRoute(hostLocation, liveCoords);
+            }
           }
         },
         (error) => {
-          console.warn('Geolocation access error:', error.message);
+          console.warn('Geolocation access notice:', error.message);
           setGpsStatus('denied');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -196,9 +319,9 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
-  }, [currentRole, rideId]);
+  }, [currentRole, rideId, hostLocation, seekerLocation, isSimulatingApproach, loadRoadRoute]);
 
-  // 4. Listen for Socket.io Location Broadcasts
+  // 3. Listen for Socket.io Location Broadcasts
   useEffect(() => {
     socket.emit('join_ride_room', rideId);
 
@@ -209,75 +332,84 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
       if (data.userRole === 'host') {
         setHostLocation(newCoords);
         if (hostMarkerRef.current) hostMarkerRef.current.setLngLat(newCoords);
+        if (!isSimulatingApproach) {
+          loadRoadRoute(newCoords, seekerLocation);
+        }
       } else {
         setSeekerLocation(newCoords);
         if (seekerMarkerRef.current) seekerMarkerRef.current.setLngLat(newCoords);
-      }
-
-      // Update Mapbox Line & Fit Bounds
-      if (mapRef.current && mapRef.current.getSource('route-line')) {
-        mapRef.current.getSource('route-line').setData({
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: data.userRole === 'host' ? [newCoords, seekerLocation] : [hostLocation, newCoords]
-          }
-        });
-        fitBoundsBetweenMarkers(mapRef.current, hostLocation, seekerLocation);
+        if (!isSimulatingApproach) {
+          loadRoadRoute(hostLocation, newCoords);
+        }
       }
     });
 
     return () => {
       socket.off('location_update');
     };
-  }, [rideId, hostLocation, seekerLocation]);
+  }, [rideId, hostLocation, seekerLocation, isSimulatingApproach, loadRoadRoute]);
 
-  // 5. Update Distance & ETA calculation
-  useEffect(() => {
-    const dLat = (seekerLocation[1] - hostLocation[1]) * 111;
-    const dLng = (seekerLocation[0] - hostLocation[0]) * 111 * Math.cos((hostLocation[1] * Math.PI) / 180);
-    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-    const calculatedKm = Math.round(dist * 10) / 10;
-    
-    setDistanceKm(calculatedKm);
-    setEtaMinutes(Math.max(1, Math.round(calculatedKm * 1.6)));
-  }, [hostLocation, seekerLocation]);
-
-  // 6. Interactive Live Simulation: Host Approaching Seeker
+  // 4. Interactive Live Simulation: Host Approaching Seeker ALONG REAL ROADS
   useEffect(() => {
     let simInterval;
+
     if (isSimulatingApproach) {
       simInterval = setInterval(() => {
-        setHostLocation((prev) => {
-          const stepFactor = 0.15;
-          const nextLng = prev[0] + (seekerLocation[0] - prev[0]) * stepFactor;
-          const nextLat = prev[1] + (seekerLocation[1] - prev[1]) * stepFactor;
-          const newHostCoords = [nextLng, nextLat];
+        const coords = roadCoordinatesRef.current;
+        if (!coords || coords.length < 2) return;
 
-          if (hostMarkerRef.current) hostMarkerRef.current.setLngLat(newHostCoords);
-          
-          if (mapRef.current && mapRef.current.getSource('route-line')) {
-            mapRef.current.getSource('route-line').setData({
-              type: 'Feature',
-              geometry: {
-                type: 'LineString',
-                coordinates: [newHostCoords, seekerLocation]
-              }
-            });
-            fitBoundsBetweenMarkers(mapRef.current, newHostCoords, seekerLocation);
-          }
+        const totalSteps = coords.length;
+        // Advance by smooth chunks along the road coordinates
+        const stepIncrement = Math.max(1, Math.floor(totalSteps / 35));
+        const nextIndex = Math.min(simStepRef.current + stepIncrement, totalSteps - 1);
+        simStepRef.current = nextIndex;
 
-          socket.emit('location_update', {
-            rideId,
-            userRole: 'host',
-            location: { lng: nextLng, lat: nextLat }
+        const nextHostCoords = coords[nextIndex];
+        setHostLocation(nextHostCoords);
+
+        if (hostMarkerRef.current) {
+          hostMarkerRef.current.setLngLat(nextHostCoords);
+        }
+
+        // Remaining road path from driver's current position to seeker
+        const remainingPath = coords.slice(nextIndex);
+        if (mapRef.current && mapRef.current.getSource('route-line')) {
+          mapRef.current.getSource('route-line').setData({
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: remainingPath.length > 1 ? remainingPath : [nextHostCoords, seekerLocation]
+            }
           });
+        }
 
-          return newHostCoords;
+        // Dynamic road distance & ETA countdown
+        const progressRatio = nextIndex / (totalSteps - 1);
+        const remainingDistance = Math.max(0.1, +(totalRoadDistanceKmRef.current * (1 - progressRatio)).toFixed(1));
+        const remainingEta = Math.max(1, Math.round(remainingDistance * 2.1));
+
+        setDistanceKm(remainingDistance);
+        setEtaMinutes(remainingEta);
+
+        // Emit live telemetry over socket
+        socket.emit('location_update', {
+          rideId,
+          userRole: 'host',
+          location: { lng: nextHostCoords[0], lat: nextHostCoords[1] }
         });
-      }, 1500);
+
+        // Arrived at seeker's pickup point
+        if (nextIndex >= totalSteps - 1) {
+          setIsSimulatingApproach(false);
+          setDistanceKm(0.0);
+          setEtaMinutes(0);
+        }
+      }, 800);
     }
-    return () => clearInterval(simInterval);
+
+    return () => {
+      if (simInterval) clearInterval(simInterval);
+    };
   }, [isSimulatingApproach, seekerLocation, rideId]);
 
   return (
@@ -288,10 +420,11 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
       {/* Top Floating Telemetry & Handshake Bar */}
       <div style={{
         position: 'absolute', top: 16, left: 16, right: 16,
-        background: 'rgba(9, 13, 22, 0.88)', backdropFilter: 'blur(16px)',
+        background: 'rgba(9, 13, 22, 0.92)', backdropFilter: 'blur(16px)',
         border: '1px solid var(--border-glow)', borderRadius: 14,
-        padding: '1rem 1.4rem', display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', flexWrap: 'wrap', gap: '1rem', zIndex: 10
+        padding: '0.9rem 1.3rem', display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', flexWrap: 'wrap', gap: '1rem', zIndex: 10,
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{
@@ -302,9 +435,17 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>Live Corridor Handshake</span>
-              <span className="badge-tag" style={{ color: 'var(--accent-green)', background: 'rgba(16,185,129,0.15)' }}>
-                ● Active GPS Stream
+              <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>Live Road Corridor Tracking</span>
+              <span style={{ 
+                color: '#34d399', 
+                background: 'rgba(16, 185, 129, 0.18)', 
+                fontSize: '0.75rem', 
+                fontWeight: 700, 
+                padding: '2px 8px', 
+                borderRadius: '9999px',
+                border: '1px solid rgba(16, 185, 129, 0.4)'
+              }}>
+                ● Real Driving Route
               </span>
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -313,19 +454,19 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
           </div>
         </div>
 
-        {/* Real-time Distance & ETA */}
+        {/* Real-time Driving Distance & ETA via Road Network */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Distance to Pickup</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Road Distance</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>
               {distanceKm} km
             </div>
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Estimated Arrival</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Driving ETA</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-green)' }}>
-              ~{etaMinutes} mins
+              {etaMinutes > 0 ? `~${etaMinutes} mins` : 'Arrived!'}
             </div>
           </div>
 
@@ -335,7 +476,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
         </div>
       </div>
 
-      {/* GPS Permission Denied Banner */}
+      {/* GPS Permission Notice Banner */}
       {gpsStatus === 'denied' && (
         <div style={{
           position: 'absolute', top: 96, left: 16, right: 16,
@@ -346,13 +487,13 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <AlertCircle size={18} />
-            <span><b>Location Access Notice:</b> Location access is required for real-time live tracking. Please enable GPS permissions or use simulation below.</span>
+            <span><b>Location Access Notice:</b> Real-time GPS stream is simulated along the road route.</span>
           </div>
           <button
             onClick={() => setGpsStatus('granted')}
             style={{ background: 'white', color: '#e11d48', border: 'none', padding: '0.3rem 0.8rem', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}
           >
-            Enable Live Simulation
+            Acknowledge
           </button>
         </div>
       )}
@@ -363,7 +504,8 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
         background: 'rgba(9, 13, 22, 0.92)', backdropFilter: 'blur(16px)',
         border: '1px solid var(--border-color)', borderRadius: 14,
         padding: '0.85rem 1.25rem', display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', flexWrap: 'wrap', gap: '1rem', zIndex: 10
+        alignItems: 'center', flexWrap: 'wrap', gap: '1rem', zIndex: 10,
+        boxSizing: 'border-box'
       }}>
         {/* Role Toggle Switch */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
@@ -377,7 +519,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
                 fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
               }}
             >
-              🧍‍♂️ Seeker View
+              🙋‍♂️ Seeker View
             </button>
             <button
               onClick={() => setCurrentRole('host')}
@@ -387,28 +529,34 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
                 fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
               }}
             >
-              🚗 Host View
+              🚗 Driver View
             </button>
           </div>
         </div>
 
-        {/* Live Simulation Controls */}
+        {/* Live Simulation Controls along Real Roads */}
         <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
           <Button
             variant={isSimulatingApproach ? 'danger' : 'success'}
-            onClick={() => setIsSimulatingApproach(!isSimulatingApproach)}
+            onClick={() => {
+              if (!isSimulatingApproach && simStepRef.current >= (roadCoordinatesRef.current?.length || 1) - 1) {
+                // Reset to beginning of road route if previously finished
+                simStepRef.current = 0;
+              }
+              setIsSimulatingApproach(!isSimulatingApproach);
+            }}
             style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
           >
             <RefreshCw size={15} className={isSimulatingApproach ? 'animate-spin' : ''} />
-            {isSimulatingApproach ? 'Pause Simulation' : 'Simulate Host Approaching (Live GPS)'}
+            {isSimulatingApproach ? 'Pause Simulation' : 'Simulate Driver Approach (Real Roads)'}
           </Button>
 
           <Button
             variant="secondary"
-            onClick={() => fitBoundsBetweenMarkers(mapRef.current, hostLocation, seekerLocation)}
+            onClick={() => fitBoundsBetweenMarkers(mapRef.current, hostLocation, seekerLocation, roadCoordinatesRef.current)}
             style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
           >
-            <Compass size={15} /> Recenter Bounds
+            <Compass size={15} /> Recenter Route
           </Button>
         </div>
       </div>

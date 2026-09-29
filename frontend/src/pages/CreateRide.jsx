@@ -1,22 +1,15 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { rideService } from '../services/api';
 import LocationAutocomplete from '../components/LocationAutocomplete';
 import Button from '../components/Button';
-import { PlusCircle, CheckCircle, Navigation, MapPin, Calendar, Users, Zap } from 'lucide-react';
-
-const getCurrentLocalDateTime = () => {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 16);
-};
+import { PlusCircle, CheckCircle, Navigation, MapPin, Users, Zap } from 'lucide-react';
 
 export default function CreateRide({ kycUser, onOpenKyc }) {
   const [formData, setFormData] = useState({
-    originAddress: 'Chennai Central, Chennai',
-    originCoords: [80.2707, 13.0827],
-    destAddress: 'Siruseri SIPCOT, OMR Corridor',
-    destCoords: [80.2220, 12.8310],
-    departureTime: getCurrentLocalDateTime(),
+    originAddress: '',
+    originCoords: null,
+    destAddress: '',
+    destCoords: null,
     totalSeats: 3,
     isWomenOnly: false
   });
@@ -26,23 +19,35 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.originAddress.trim()) {
+      setError('Please specify a starting point / origin.');
+      return;
+    }
+    if (!formData.destAddress.trim()) {
+      setError('Please specify a final destination.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
+    const origCoords = formData.originCoords || [80.2707, 13.0827];
+    const dstCoords = formData.destCoords || [80.2220, 12.8310];
 
     try {
       await rideService.createRide({
         origin: { 
           address: formData.originAddress, 
-          latitude: formData.originCoords[1], 
-          longitude: formData.originCoords[0] 
+          latitude: origCoords[1], 
+          longitude: origCoords[0] 
         },
         destination: { 
           address: formData.destAddress, 
-          latitude: formData.destCoords[1], 
-          longitude: formData.destCoords[0] 
+          latitude: dstCoords[1], 
+          longitude: dstCoords[0] 
         },
         driverId: kycUser?.id || kycUser?._id,
-        departureTime: formData.departureTime || new Date().toISOString(),
+        departureTime: new Date().toISOString(),
         totalSeats: Math.min(6, Math.max(1, Number(formData.totalSeats))),
         availableSeats: Math.min(6, Math.max(1, Number(formData.totalSeats))),
         pricePerKm: 10,
@@ -131,37 +136,22 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Departure Time (Defaults to Live Time)
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="datetime-local"
-                    className="input-light"
-                    value={formData.departureTime}
-                    onChange={(e) => setFormData({ ...formData, departureTime: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                  Passenger Seats (Max 6)
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    min="1"
-                    max="6"
-                    className="input-light"
-                    value={formData.totalSeats}
-                    onChange={(e) => setFormData({ ...formData, totalSeats: Math.min(6, Math.max(1, Number(e.target.value))) })}
-                    style={{ paddingLeft: '2.4rem' }}
-                  />
-                  <Users size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: 13 }} />
-                </div>
+            {/* Passenger Seats Selection (Max 6) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                Passenger Seats (Max 6)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number"
+                  min="1"
+                  max="6"
+                  className="input-light"
+                  value={formData.totalSeats}
+                  onChange={(e) => setFormData({ ...formData, totalSeats: Math.min(6, Math.max(1, Number(e.target.value))) })}
+                  style={{ paddingLeft: '2.4rem' }}
+                />
+                <Users size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: 13 }} />
               </div>
             </div>
 

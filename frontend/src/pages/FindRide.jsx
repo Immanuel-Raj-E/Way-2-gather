@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { rideService } from '../services/api';
 import LocationAutocomplete from '../components/LocationAutocomplete';
 import MatchCard from '../components/MatchCard';
 import Map from '../components/Map';
 import NoMatchCard from '../components/NoMatchCard';
 import Button from '../components/Button';
-import { Search, Compass, ShieldCheck, Zap, Shield, Filter, MapPin } from 'lucide-react';
+import { Search, Compass, Zap, MapPin } from 'lucide-react';
 
 export default function FindRide({ kycUser, onOpenKyc }) {
-  const [pickup, setPickup] = useState('Chennai Central, Chennai');
-  const [pickupCoords, setPickupCoords] = useState([80.2707, 13.0827]);
-  const [dropoff, setDropoff] = useState('Sholinganallur, OMR Corridor');
-  const [dropoffCoords, setDropoffCoords] = useState([80.2280, 12.8950]);
+  // Pickup and drop-off start empty so location is not decided automatically
+  const [pickup, setPickup] = useState('');
+  const [pickupCoords, setPickupCoords] = useState(null);
+  const [dropoff, setDropoff] = useState('');
+  const [dropoffCoords, setDropoffCoords] = useState(null);
   const [preferredTime, setPreferredTime] = useState('');
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [womenOnly, setWomenOnly] = useState(false);
@@ -21,12 +22,20 @@ export default function FindRide({ kycUser, onOpenKyc }) {
 
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
+    if (!pickup.trim()) {
+      alert('Please enter or select your pickup location first.');
+      return;
+    }
+
+    const pCoords = pickupCoords || [80.2707, 13.0827];
+    const dCoords = dropoffCoords || [80.2280, 12.8950];
+
     setLoading(true);
     setHasSearched(true);
     try {
       const res = await rideService.findMatches({
-        origin: { address: pickup, latitude: pickupCoords[1], longitude: pickupCoords[0] },
-        destination: { address: dropoff, latitude: dropoffCoords[1], longitude: dropoffCoords[0] },
+        origin: { address: pickup, latitude: pCoords[1], longitude: pCoords[0] },
+        destination: { address: dropoff || 'Destination', latitude: dCoords[1], longitude: dCoords[0] },
         preferredTime: preferredTime || new Date().toISOString(),
         seatsNeeded: Number(seatsNeeded),
         womenOnly: Boolean(womenOnly)
@@ -42,10 +51,12 @@ export default function FindRide({ kycUser, onOpenKyc }) {
 
   const handleBookPool = async (match) => {
     try {
+      const pCoords = pickupCoords || [80.2707, 13.0827];
+      const dCoords = dropoffCoords || [80.2280, 12.8950];
       const res = await rideService.requestRide({
         rideId: match.id || match._id,
-        origin: { address: pickup, latitude: pickupCoords[1], longitude: pickupCoords[0] },
-        destination: { address: dropoff, latitude: dropoffCoords[1], longitude: dropoffCoords[0] },
+        origin: { address: pickup, latitude: pCoords[1], longitude: pCoords[0] },
+        destination: { address: dropoff, latitude: dCoords[1], longitude: dCoords[0] },
         seatsNeeded: Number(seatsNeeded),
         seekerName: kycUser?.name || 'Verified Seeker'
       });
@@ -92,14 +103,14 @@ export default function FindRide({ kycUser, onOpenKyc }) {
       {/* Search Filter Form */}
       <div className="white-panel" style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
         <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
                 Pickup Location (Tamil Nadu NLP)
               </label>
               <LocationAutocomplete
                 value={pickup}
-                placeholder="Search pickup in Tamil Nadu..."
+                placeholder="Type or select pickup in Tamil Nadu..."
                 icon={MapPin}
                 iconColor="var(--primary)"
                 onChange={(val) => setPickup(val)}
@@ -116,7 +127,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
               </label>
               <LocationAutocomplete
                 value={dropoff}
-                placeholder="Search destination in Tamil Nadu..."
+                placeholder="Type or select destination in Tamil Nadu..."
                 icon={Compass}
                 iconColor="var(--accent-sky)"
                 onChange={(val) => setDropoff(val)}
@@ -127,17 +138,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
-                Departure Time
-              </label>
-              <input
-                type="datetime-local"
-                className="input-light"
-                value={preferredTime}
-                onChange={(e) => setPreferredTime(e.target.value)}
-              />
-            </div>
+
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
@@ -164,9 +165,18 @@ export default function FindRide({ kycUser, onOpenKyc }) {
       {/* Main Map & Live Results */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1.15fr) minmax(320px, 1fr)', gap: '1.5rem' }}>
         <Map
-          origin={{ address: pickup, latitude: 13.0827, longitude: 80.2707 }}
-          destination={{ address: dropoff, latitude: 12.8950, longitude: 80.2280 }}
-          matches={matches}
+          origin={hasSearched && pickup ? { 
+            address: pickup, 
+            latitude: pickupCoords ? pickupCoords[1] : 13.0827, 
+            longitude: pickupCoords ? pickupCoords[0] : 80.2707 
+          } : null}
+          destination={hasSearched && dropoff ? { 
+            address: dropoff, 
+            latitude: dropoffCoords ? dropoffCoords[1] : 12.8950, 
+            longitude: dropoffCoords ? dropoffCoords[0] : 80.2280 
+          } : null}
+          matches={hasSearched ? matches : []}
+          hasRequested={hasSearched}
         />
 
         <div>
@@ -184,7 +194,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
               <Compass size={40} color="var(--text-muted)" style={{ margin: '0 auto 0.75rem' }} />
               <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>Ready to Search</div>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Enter your route to query live MongoDB drivers within radius and run XGBoost matching.
+                Enter your pickup and destination in Tamil Nadu to query live MongoDB drivers within radius. Points will appear on the map after searching.
               </p>
             </div>
           ) : (
@@ -203,3 +213,4 @@ export default function FindRide({ kycUser, onOpenKyc }) {
     </div>
   );
 }
+
