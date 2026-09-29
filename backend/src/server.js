@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
       rideDetails: rideDetails || {
         origin: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
         destination: { address: 'Electronic City Phase 1', latitude: 12.8450, longitude: 77.6600 },
-        hostName: 'Priya Sharma (Verified Host)',
+        hostName: 'Priya Sharma (Rider)',
         vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City' }
       }
     };

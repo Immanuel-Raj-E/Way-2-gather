@@ -24,8 +24,11 @@ const createRide = async (req, res, next) => {
       vehicle,
       mapboxPolyline
     } = req.body;
-    
-    const driverId = req.user ? req.user.id : (req.body.driverId || new (require('mongoose').Types.ObjectId)());
+    let driverId = req.user ? req.user.id : req.body.driverId;
+    if (!driverId) {
+      const activeUser = await User.findOne({ 'safetyProfile.accountStatus': 'Active' }).sort({ createdAt: -1 });
+      driverId = activeUser ? activeUser._id : new (require('mongoose').Types.ObjectId)();
+    }
 
     const startLng = Number(origin.lng ?? origin.longitude ?? 80.2707);
     const startLat = Number(origin.lat ?? origin.latitude ?? 13.0827);
@@ -136,7 +139,7 @@ const findMatches = async (req, res, next) => {
     const formattedCandidates = candidateRides.map(r => ({
       id: r._id.toString(),
       driver_id: r.driver?._id ? r.driver._id.toString() : 'unassigned',
-      driver_name: r.driver?.name || 'Verified Host',
+      driver_name: r.driver?.name || 'Rider',
       driver_rating: r.driver?.driverRating || 5.0,
       seeker_rating: r.driver?.seekerRating || 5.0,
       driver_gender: r.driver?.gender || 'Female',

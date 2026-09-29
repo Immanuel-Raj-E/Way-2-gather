@@ -107,7 +107,7 @@ export default function ActiveTrip({ rideData, onTripEnd }) {
 
   // 1. Web Share API Handler
   const handleShareLiveStatus = async () => {
-    const shareText = `Track my way-2-gather carpool securely: https://way-2-gather.app/track/${rideId} - Vehicle: ${ride.vehicle?.plateNumber || 'TN-01-AB-8821'} (${ride.vehicle?.model || 'Sedan'}), Driver: ${ride.driver?.name || 'Verified Host'}`;
+    const shareText = `Track my way-2-gather carpool securely: https://way-2-gather.app/track/${rideId} - Vehicle: ${ride.vehicle?.plateNumber || 'TN-01-AB-8821'} (${ride.vehicle?.model || 'Sedan'}), Driver: ${ride.driver?.name || 'Rider'}`;
 
     if (navigator.share) {
       try {

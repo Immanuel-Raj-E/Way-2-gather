@@ -41,6 +41,7 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
           latitude: formData.destCoords[1], 
           longitude: formData.destCoords[0] 
         },
+        driverId: kycUser?.id || kycUser?._id,
         departureTime: formData.departureTime || new Date().toISOString(),
         totalSeats: Math.min(6, Math.max(1, Number(formData.totalSeats))),
         availableSeats: Math.min(6, Math.max(1, Number(formData.totalSeats))),

@@ -30,13 +30,13 @@ export default function MatchCard({ match, onRequest, isRequested }) {
             <User size={22} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
-              {match.driver_name || 'Verified Host'}
+            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+              {match.driver_name || match.driver?.name || 'Rider'}
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span>Driver: ⭐ {match.driver_rating || 5.0}</span>
-              <span>•</span>
-              <span>Seeker: ⭐ {match.seeker_rating || 5.0}</span>
+              <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                ⭐ {match.driver_rating ? Number(match.driver_rating).toFixed(1) : '5.0'}
+              </span>
               <span>•</span>
               <span>{match.available_seats || 2} seats open</span>
             </div>

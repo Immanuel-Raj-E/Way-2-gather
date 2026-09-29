@@ -57,7 +57,7 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
       rideDetails: {
         origin: ride.startLocation ? { latitude: ride.startLocation.coordinates[1], longitude: ride.startLocation.coordinates[0], address: ride.startLocation.address } : { latitude: 13.0827, longitude: 80.2707, address: 'Chennai Central' },
         destination: ride.endLocation ? { latitude: ride.endLocation.coordinates[1], longitude: ride.endLocation.coordinates[0], address: ride.endLocation.address } : { latitude: 12.8950, longitude: 80.2280, address: 'OMR Corridor' },
-        hostName: ride.driver?.name || 'Verified Host',
+        hostName: ride.driver?.name || 'Rider',
         vehicle: ride.vehicle || { plateNumber: 'TN-01-AB-1234', model: 'Sedan' }
       }
     });
@@ -66,7 +66,7 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
       rideId,
       hostLocation: ride.startLocation ? [ride.startLocation.coordinates[0], ride.startLocation.coordinates[1]] : [80.2707, 13.0827],
       seekerLocation: ride.endLocation ? [ride.endLocation.coordinates[0], ride.endLocation.coordinates[1]] : [80.2280, 12.8950],
-      hostName: ride.driver?.name || 'Verified Host',
+      hostName: ride.driver?.name || 'Rider',
       vehicle: ride.vehicle || { plateNumber: 'TN-01-AB-1234', model: 'Sedan' }
     });
   };
@@ -213,7 +213,7 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                     <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
-                      {r.driver?.name || 'Verified Host'}
+                      {r.driver?.name || 'Rider'}
                     </span>
                     <span className="badge-score" style={{ fontSize: '0.75rem' }}>
                       ⭐ Driver: {r.driver?.driverRating || 5.0}
