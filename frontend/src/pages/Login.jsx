@@ -37,15 +37,18 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const res = await authService.login({
-        email: formData.email,
-        password: formData.password
-      });
-
-      if (res.data.token) {
-        localStorage.setItem('way2gather_token', res.data.token);
+      if (setAuthSession) {
+        await setAuthSession(formData.email, formData.password);
+      } else {
+        const res = await authService.login({
+          email: formData.email,
+          password: formData.password
+        });
+        if (res.data.token) {
+          localStorage.setItem('way2gather_token', res.data.token);
+        }
       }
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setServerError(err.response?.data?.message || 'Invalid email or password.');
     } finally {

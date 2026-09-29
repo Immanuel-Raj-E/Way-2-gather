@@ -81,7 +81,7 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const res = await authService.register({
+      await authService.register({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -92,10 +92,10 @@ export default function Register() {
         documentIdUrl: documentPreview || 'https://way-2-gather.app/documents/verified_id.pdf'
       });
 
-      if (res.data.token) {
-        localStorage.setItem('way2gather_token', res.data.token);
+      if (setAuthSession) {
+        await setAuthSession(formData.email, formData.password);
       }
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setServerError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
