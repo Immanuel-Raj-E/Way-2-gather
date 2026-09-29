@@ -5,8 +5,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  // Instant synchronous evaluation: If no token exists, loading is immediately false (zero flash/glitch)
-  const [loading, setLoading] = useState(() => !!localStorage.getItem('way2gather_token'));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
