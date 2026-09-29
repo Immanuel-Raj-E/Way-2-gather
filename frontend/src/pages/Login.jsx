@@ -56,6 +56,36 @@ export default function Login() {
     }
   };
 
+  const handleDemoSignIn = async (email = 'imman8046@gmail.com') => {
+    setLoading(true);
+    setServerError(null);
+    try {
+      if (setAuthSession) {
+        await setAuthSession(email, 'password123');
+      } else {
+        const fallbackUser = {
+          id: 'usr_demo_101',
+          name: 'Immanuel Raj E',
+          email,
+          gender: 'Male',
+          phone: '+91 98765 43210',
+          kycStatus: 'verified',
+          isVerified: true,
+          driverRating: 5.0,
+          seekerRating: 5.0,
+          safetyProfile: { accountStatus: 'Active', harassmentReports: 0 }
+        };
+        localStorage.setItem('way2gather_token', 'demo_session_token_' + Date.now());
+        localStorage.setItem('way2gather_user', JSON.stringify(fallbackUser));
+      }
+      navigate('/');
+    } catch (err) {
+      setServerError('Demo sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '440px', margin: '3rem auto', width: '100%' }}>
       <div className="white-panel" style={{ padding: '2.25rem' }}>
@@ -135,6 +165,34 @@ export default function Login() {
           <Button type="submit" variant="primary" disabled={loading} style={{ marginTop: '0.5rem', width: '100%' }}>
             {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
           </Button>
+
+          <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+            <button
+              type="button"
+              onClick={() => handleDemoSignIn('imman8046@gmail.com')}
+              style={{
+                width: '100%',
+                padding: '0.65rem 1rem',
+                background: '#f8fafc',
+                border: '1px solid var(--border-color)',
+                borderRadius: 8,
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: 'var(--primary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#f8fafc'}
+            >
+              <span>⚡</span>
+              <span>1-Click Verified Login (Immanuel Raj E)</span>
+            </button>
+          </div>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
