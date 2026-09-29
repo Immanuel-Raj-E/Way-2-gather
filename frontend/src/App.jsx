@@ -36,7 +36,15 @@ function ProtectedRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>
+          Loading way-2-gather...
+        </div>
+      </div>
+    );
+  }
 
   if (user) {
     return <Navigate to="/" replace />;

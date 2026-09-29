@@ -8,20 +8,34 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     const checkAuth = async () => {
       const token = localStorage.getItem('way2gather_token');
       if (token) {
         try {
           const res = await authService.getProfile();
-          setUser(res.data.user);
+          if (mounted && res.data?.user) {
+            setUser(res.data.user);
+          }
         } catch (err) {
-          console.warn('Auth token invalid or expired');
+          console.warn('Auth token invalid or expired:', err.message);
           localStorage.removeItem('way2gather_token');
+          if (mounted) setUser(null);
         }
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     };
+
     checkAuth();
+    // Safety fallback: guaranteed loading completion within 1.5s
+    const timer = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 1500);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const login = async (email, password) => {

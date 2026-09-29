@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'way2gather_super_secure_jwt_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_syncride_jwt_token_2026';
 
 /**
  * Register User with Mandatory KYC Government ID Document Upload
