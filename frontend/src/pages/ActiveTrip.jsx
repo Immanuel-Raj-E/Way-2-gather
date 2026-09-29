@@ -10,7 +10,7 @@ import {
  * Mathematical Great-Circle Cross-Track Distance Formula (in kilometers)
  * Calculates the exact perpendicular offset of point P(lat, lon) from trajectory segment A -> B
  */
-export function pointToSegmentDistanceKm(pLat, pLon, aLat, aLon, bLat, bLon) {
+function pointToSegmentDistanceKm(pLat, pLon, aLat, aLon, bLat, bLon) {
   const R = 6371; // Earth's radius in km
   const toRad = (deg) => (deg * Math.PI) / 180;
 
