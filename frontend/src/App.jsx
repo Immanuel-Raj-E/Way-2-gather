@@ -17,9 +17,9 @@ function ProtectedRoute({ children }) {
   
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>
-          Loading way-2-gather...
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.95rem' }}>
+          Loading...
         </div>
       </div>
     );
@@ -32,19 +32,9 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// Route Guard for Public Auth Screens (Login / Register)
+// Route Guard for Public Auth Screens (Login / Register) - Instant Render
 function PublicRoute({ children }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>
-          Loading way-2-gather...
-        </div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   if (user) {
     return <Navigate to="/" replace />;
