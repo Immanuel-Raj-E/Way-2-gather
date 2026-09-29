@@ -44,6 +44,8 @@ app.get('/api/health', (req, res) => {
     status: 'healthy', 
     service: 'SyncRide Backend API',
     features: [
+      'MapboxLiveTripHandshake',
+      'RealtimeLocationBroadcast',
       'StrictAadharKYC_SHA256', 
       'AutomatedHarassmentAutoBan', 
       'WomenSafetyBarrier', 
@@ -55,12 +57,72 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// WebSocket Connection Lifecycle
+// WebSocket Connection Lifecycle & Real-Time Handshake Engine
 io.on('connection', (socket) => {
   console.log(`[Socket.io]: Client connected -> ${socket.id}`);
 
+  // 1. Join ride room
   socket.on('join_ride_room', (rideId) => {
-    socket.join(`ride_${rideId}`);
+    const roomName = `ride_${rideId}`;
+    socket.join(roomName);
+    console.log(`[Socket.io]: Socket ${socket.id} joined ${roomName}`);
+  });
+
+  // 2. Handshake: Host clicks "Accept" -> emits accept_ride
+  socket.on('accept_ride', (data) => {
+    const { rideId, hostId, seekerId, rideDetails } = data;
+    const roomName = `ride_${rideId}`;
+    
+    console.log(`[Socket.io Handshake]: Host ${hostId} accepted ride ${rideId} for Seeker ${seekerId}`);
+
+    const payload = {
+      rideId,
+      hostId,
+      seekerId,
+      status: 'in_progress',
+      startedAt: new Date().toISOString(),
+      rideDetails: rideDetails || {
+        origin: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
+        destination: { address: 'Electronic City Phase 1', latitude: 12.8450, longitude: 77.6600 },
+        hostName: 'Priya Sharma (Verified Host)',
+        vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City' }
+      }
+    };
+
+    // Broadcast to the specific room AND globally so all paired seeker/host tabs transition
+    io.to(roomName).emit('ride_started', payload);
+    io.emit('ride_started', payload);
+    io.emit(`ride_started_${rideId}`, payload);
+  });
+
+  // 3. Live GPS Location Stream: location_update
+  socket.on('location_update', (data) => {
+    const { rideId, userRole, location } = data;
+    const roomName = `ride_${rideId}`;
+
+    const normalizedLocation = {
+      lng: location.lng ?? location.longitude ?? 77.6280,
+      lat: location.lat ?? location.latitude ?? 12.9340
+    };
+
+    const updatePayload = {
+      rideId,
+      userRole, // 'host' or 'seeker'
+      location: normalizedLocation,
+      timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to everyone in the room
+    io.to(roomName).emit('location_update', updatePayload);
+    io.emit('location_update', updatePayload); // Fallback for single-client demo
+
+    if (userRole === 'host') {
+      io.to(roomName).emit('host_location', normalizedLocation);
+      io.emit('host_location', normalizedLocation);
+    } else {
+      io.to(roomName).emit('seeker_location', normalizedLocation);
+      io.emit('seeker_location', normalizedLocation);
+    }
   });
 
   socket.on('disconnect', () => {

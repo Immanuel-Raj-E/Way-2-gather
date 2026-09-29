@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { rideService } from '../services/api';
+import { socket, rideService } from '../services/api';
 import { formatCurrency, formatDateTime } from '../utils/helpers';
 import ReviewModal from '../components/ReviewModal';
+import ActiveTripMap from '../components/ActiveTripMap';
 import Button from '../components/Button';
 import { 
   LayoutDashboard, Car, Clock, ShieldCheck, ShieldAlert, 
-  TrendingUp, Leaf, Cpu, CheckCircle2, UserX, Fingerprint, Star, AlertTriangle 
+  TrendingUp, Leaf, Cpu, CheckCircle2, UserX, Fingerprint, Star, Play, MapPin 
 } from 'lucide-react';
 
 export default function Dashboard({ kycUser, onOpenKyc }) {
@@ -15,6 +16,21 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
   const [harassmentStrikes, setHarassmentStrikes] = useState(0);
   const [accountStatus, setAccountStatus] = useState(kycUser?.accountStatus || 'Active');
 
+  // Step 3: Active Ride State for Map Transition
+  const [activeRide, setActiveRide] = useState(null);
+
+  // Listen for Socket.io ride_started event
+  useEffect(() => {
+    socket.on('ride_started', (data) => {
+      console.log('[Socket.io UI Event]: ride_started received -> Transitioning to Mapbox Live Map', data);
+      setActiveRide(data);
+    });
+
+    return () => {
+      socket.off('ride_started');
+    };
+  }, []);
+
   useEffect(() => {
     const fetchRides = async () => {
       try {
@@ -23,10 +39,10 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
       } catch (err) {
         setRides([
           {
-            _id: '1',
+            _id: 'ride_blr_101',
             driver: { name: 'Priya Sharma (KYC Verified)', rating: 4.95, gender: 'Female' },
-            origin: { address: 'Koramangala 4th Block' },
-            destination: { address: 'Electronic City Phase 1' },
+            origin: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
+            destination: { address: 'Electronic City Phase 1', latitude: 12.8450, longitude: 77.6600 },
             departureTime: new Date(Date.now() + 15 * 60000).toISOString(),
             availableSeats: 2,
             pricePerSeat: 10,
@@ -41,12 +57,51 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
     fetchRides();
   }, []);
 
+  const handleHostAcceptRide = (ride) => {
+    const rideId = ride._id || ride.id || 'ride_blr_101';
+    
+    // Emit accept_ride via Socket.io to trigger backend and mutual app transition
+    socket.emit('accept_ride', {
+      rideId,
+      hostId: 'host_priya_sharma',
+      seekerId: 'seeker_ananya_reddy',
+      rideDetails: {
+        origin: ride.origin,
+        destination: ride.destination,
+        hostName: ride.driver?.name || 'Priya Sharma',
+        vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City' }
+      }
+    });
+
+    // Immediate state transition for local client
+    setActiveRide({
+      rideId,
+      hostLocation: [77.6280, 12.9340],
+      seekerLocation: [77.6600, 12.8450],
+      hostName: ride.driver?.name || 'Priya Sharma',
+      vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City' }
+    });
+  };
+
   const handleReviewSubmitted = (data) => {
     if (data.safetyStatus) {
       setHarassmentStrikes(data.safetyStatus.totalHarassmentReports);
       setAccountStatus(data.safetyStatus.accountStatus);
     }
   };
+
+  // STEP 3: If activeRide is present, unmount normal dashboard and render Fullscreen Mapbox ActiveTripMap
+  if (activeRide) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <ActiveTripMap
+          activeRide={activeRide}
+          userRole="host"
+          onEndTrip={() => setActiveRide(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -128,6 +183,56 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
         </div>
       </div>
 
+      {/* Match Cards with Host "Accept" Socket.io Handshake Trigger */}
+      <div className="glass-panel" style={{ border: '1px solid var(--border-glow)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Pending Carpool Requests (Host Handshake)</h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Click "Accept & Launch Live Map" to emit <code>accept_ride</code> via Socket.io and transition both users into Mapbox live tracking.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {rides.map((r) => (
+            <div
+              key={r._id}
+              style={{
+                background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)',
+                padding: '1.2rem', borderRadius: 12, display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{r.driver?.name || 'Verified Host'}</span>
+                  {r.isWomenOnly && (
+                    <span className="badge-tag" style={{ color: 'var(--accent-rose)' }}>🛡️ Women-Only</span>
+                  )}
+                  <span className="badge-score high" style={{ fontSize: '0.7rem' }}>99.2% Fit</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Route: <b>{r.origin?.address}</b> ➔ <b>{r.destination?.address}</b>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', marginTop: '0.2rem' }}>
+                  Departure: {formatDateTime(r.departureTime)} • {r.availableSeats} seats open
+                </div>
+              </div>
+
+              {/* Host Socket Accept Trigger */}
+              <Button
+                variant="success"
+                onClick={() => handleHostAcceptRide(r)}
+                style={{ padding: '0.65rem 1.3rem', fontSize: '0.95rem' }}
+              >
+                <Play size={16} fill="white" /> Accept & Launch Live Map (Socket.io)
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Metrics Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
         <div className="glass-panel">
@@ -152,71 +257,11 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
 
         <div className="glass-panel">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <Car size={16} color="var(--primary-light)" /> Active Host Pools
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.5rem' }}>{rides.length || 2}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>MongoDB Indexed</div>
-        </div>
-
-        <div className="glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             <Leaf size={16} color="var(--accent-green)" /> Total CO₂ Offset
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--accent-green)' }}>54.2 kg</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>0.192 kg CO₂/km formula</div>
         </div>
-      </div>
-
-      {/* Ride Listings Table */}
-      <div className="glass-panel">
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Active Host Corridors & Safety Verification</h2>
-        {rides.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>No host corridors found.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '0.75rem' }}>Host & Verification</th>
-                  <th style={{ padding: '0.75rem' }}>Route Corridor</th>
-                  <th style={{ padding: '0.75rem' }}>Departure</th>
-                  <th style={{ padding: '0.75rem' }}>Safety Filter</th>
-                  <th style={{ padding: '0.75rem' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rides.map((r) => (
-                  <tr key={r._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '0.75rem', fontWeight: 600 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span>{r.driver?.name || 'Verified Host'}</span>
-                        <ShieldCheck size={14} color="var(--accent-green)" />
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.75rem' }}>
-                      {r.origin?.address} ➔ {r.destination?.address}
-                    </td>
-                    <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>
-                      {formatDateTime(r.departureTime)}
-                    </td>
-                    <td style={{ padding: '0.75rem' }}>
-                      {r.isWomenOnly ? (
-                        <span className="badge-tag" style={{ color: 'var(--accent-rose)' }}>🛡️ Women-Only</span>
-                      ) : (
-                        <span className="badge-tag">Standard Pool</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '0.75rem' }}>
-                      <span className="badge-tag" style={{ color: 'var(--accent-green)' }}>
-                        {r.status || 'scheduled'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       {/* Review Modal */}
