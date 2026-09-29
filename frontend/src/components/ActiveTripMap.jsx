@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { socket } from '../services/api';
 import Button from './Button';
 import { 
@@ -8,31 +8,7 @@ import {
   RefreshCw, CheckCircle2, ArrowRight, Share2, Compass, Radio 
 } from 'lucide-react';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
-const CARTO_DARK_STYLE = {
-  version: 8,
-  sources: {
-    'carto-dark': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png'
-      ],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors © CARTO'
-    }
-  },
-  layers: [
-    {
-      id: 'carto-dark-layer',
-      type: 'raster',
-      source: 'carto-dark',
-      minzoom: 0,
-      maxzoom: 20
-    }
-  ]
-};
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
 
 export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTrip }) {
   const mapContainerRef = useRef(null);
@@ -57,14 +33,14 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
   const [etaMinutes, setEtaMinutes] = useState(18);
   const [isSimulatingApproach, setIsSimulatingApproach] = useState(false);
 
-  // 1. Initialize Mapbox GL JS Instance
+  // 1. Initialize MapLibre GL JS Instance with MapTiler Dark Theme
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     try {
-      const map = new mapboxgl.Map({
+      const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: CARTO_DARK_STYLE,
+        style: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
         center: [
           (hostLocation[0] + seekerLocation[0]) / 2,
           (hostLocation[1] + seekerLocation[1]) / 2
@@ -73,7 +49,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
         attributionControl: false
       });
 
-      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
 
       map.on('load', () => {
         mapRef.current = map;
@@ -101,7 +77,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
           </div>
         `;
 
-        hostMarkerRef.current = new mapboxgl.Marker({ element: hostEl, anchor: 'center' })
+        hostMarkerRef.current = new maplibregl.Marker({ element: hostEl, anchor: 'center' })
           .setLngLat(hostLocation)
           .addTo(map);
 
@@ -128,7 +104,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
           </div>
         `;
 
-        seekerMarkerRef.current = new mapboxgl.Marker({ element: seekerEl, anchor: 'center' })
+        seekerMarkerRef.current = new maplibregl.Marker({ element: seekerEl, anchor: 'center' })
           .setLngLat(seekerLocation)
           .addTo(map);
 
@@ -164,7 +140,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
       // Cleanup
       return () => map.remove();
     } catch (err) {
-      console.warn('Mapbox initialization fallback mode:', err.message);
+      console.warn('Map initialization notice:', err.message);
     }
   }, []);
 
@@ -172,7 +148,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
   const fitBoundsBetweenMarkers = (mapInstance, hLoc, sLoc) => {
     if (!mapInstance) return;
 
-    const bounds = new mapboxgl.LngLatBounds();
+    const bounds = new maplibregl.LngLatBounds();
     bounds.extend(hLoc);
     bounds.extend(sLoc);
 

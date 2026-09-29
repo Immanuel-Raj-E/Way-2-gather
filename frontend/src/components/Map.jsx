@@ -1,41 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapPin, Navigation, ShieldCheck } from 'lucide-react';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
-mapboxgl.accessToken = MAPBOX_TOKEN;
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
 
 // Exact Tamil Nadu Geographical Bounding Box [Southwest lng, lat], [Northeast lng, lat]
 export const TN_BOUNDS = [
   [76.15, 8.05], // SW: Kanyakumari / Western Ghats boundary
   [80.35, 13.55] // NE: Chennai / Pulicat Lake boundary
 ];
-
-const CARTO_LIGHT_STYLE = {
-  version: 8,
-  sources: {
-    'carto-voyager': {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'
-      ],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors © CARTO'
-    }
-  },
-  layers: [
-    {
-      id: 'carto-voyager-layer',
-      type: 'raster',
-      source: 'carto-voyager',
-      minzoom: 0,
-      maxzoom: 20
-    }
-  ]
-};
 
 export const CHENNAI_CENTER = [80.2707, 13.0827];
 
@@ -49,19 +23,19 @@ export default function Map({ origin, destination, matches = [], height = '380px
     if (!mapContainerRef.current) return;
 
     try {
-      // Use Carto Voyager light style or Mapbox if valid token
-      const useMapboxStyle = MAPBOX_TOKEN && MAPBOX_TOKEN.length > 50 && !MAPBOX_TOKEN.includes('dummy');
-      
-      const map = new mapboxgl.Map({
+      // MapTiler Vector Streets Style with Active Key
+      const mapStyle = `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`;
+
+      const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: CARTO_LIGHT_STYLE,
+        style: mapStyle,
         center: CHENNAI_CENTER,
         zoom: 10,
         maxBounds: TN_BOUNDS, // Strictly restricts panning & zooming to Tamil Nadu only!
         attributionControl: false
       });
 
-      map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
 
       map.on('load', () => {
         mapRef.current = map;
@@ -74,7 +48,7 @@ export default function Map({ origin, destination, matches = [], height = '380px
               🟢
             </div>
           `;
-          originMarkerRef.current = new mapboxgl.Marker({ element: origEl })
+          originMarkerRef.current = new maplibregl.Marker({ element: origEl })
             .setLngLat([origin.longitude, origin.latitude])
             .addTo(map);
         }
@@ -87,7 +61,7 @@ export default function Map({ origin, destination, matches = [], height = '380px
               🏁
             </div>
           `;
-          destMarkerRef.current = new mapboxgl.Marker({ element: destEl })
+          destMarkerRef.current = new maplibregl.Marker({ element: destEl })
             .setLngLat([destination.longitude, destination.latitude])
             .addTo(map);
         }
@@ -95,7 +69,7 @@ export default function Map({ origin, destination, matches = [], height = '380px
 
       return () => map.remove();
     } catch (err) {
-      console.warn('Mapbox initialization notice:', err.message);
+      console.warn('Map initialization notice:', err.message);
     }
   }, []);
 

@@ -38,7 +38,7 @@ export default function LocationAutocomplete({
   const containerRef = useRef(null);
   const debounceTimer = useRef(null);
 
-  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoiaW1tYW51ZWxyYWoiLCJhIjoiY2x4b3k0eHptMGZmdTJrb2RldGg2eHBzNyJ9.5ntZgp5HiwKhO1Dd4AEn';
+  const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
 
   useEffect(() => {
     setQuery(value || '');
@@ -73,18 +73,18 @@ export default function LocationAutocomplete({
 
     debounceTimer.current = setTimeout(async () => {
       try {
-        // Query Mapbox Geocoding API with Tamil Nadu Bounding Box
-        const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?country=in&bbox=76.15,8.05,80.35,13.55&types=place,locality,neighborhood,address,poi&access_token=${MAPBOX_TOKEN}`;
+        // Query MapTiler Geocoding API with Tamil Nadu Bounding Box
+        const endpoint = `https://api.maptiler.com/geocoding/${encodeURIComponent(val)}.json?key=${MAPTILER_KEY}&bbox=76.15,8.05,80.35,13.55`;
         const res = await fetch(endpoint);
         const data = await res.json();
 
         if (data.features && data.features.length > 0) {
-          const mapboxMatches = data.features.map(f => ({
+          const maptilerMatches = data.features.map(f => ({
             placeName: f.place_name,
             address: f.text || f.place_name.split(',')[0],
             coords: f.center // [longitude, latitude]
           }));
-          setSuggestions(mapboxMatches);
+          setSuggestions(maptilerMatches);
         } else {
           // Fallback to local Tamil Nadu NLP Hubs
           const localFiltered = TAMIL_NADU_HUBS.filter(h => 
