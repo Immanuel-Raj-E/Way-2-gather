@@ -81,12 +81,11 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
         )}
 
         {submitted ? (
-          <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-            <CheckCircle size={52} color="var(--primary)" style={{ margin: '0 auto 1rem' }} />
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>Ride Published Successfully!</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-              Your ride is now live in MongoDB and ready for Tamil Nadu seekers to match via XGBoost.
-            </p>
+          <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+            <CheckCircle size={56} color="var(--primary)" style={{ margin: '0 auto 1.25rem' }} />
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1.5rem' }}>
+              Ride Published Successfully!
+            </h2>
             <Button variant="primary" onClick={() => setSubmitted(false)}>
               Publish Another Route
             </Button>
