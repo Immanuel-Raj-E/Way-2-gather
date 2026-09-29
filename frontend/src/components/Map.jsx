@@ -78,32 +78,15 @@ export default function Map({ origin, destination, matches = [], hasRequested = 
         container: mapContainerRef.current,
         style: 'mapbox://styles/mapbox/streets-v12',
         center: CHENNAI_CENTER,
-        zoom: 10,
-        maxBounds: TN_BOUNDS,
+        zoom: 11,
         attributionControl: false
       });
 
       map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
 
-      map.on('error', (e) => {
-        if (e?.error?.status === 401 || (e?.message && e.message.includes('401'))) {
-          console.warn('Mapbox auth notice, falling back to OSM tiles:', e.message);
-          map.setStyle({
-            version: 8,
-            sources: {
-              'osm-tiles': {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256
-              }
-            },
-            layers: [{ id: 'osm-tiles-layer', type: 'raster', source: 'osm-tiles' }]
-          });
-        }
-      });
-
       map.on('load', () => {
         mapRef.current = map;
+        map.resize();
 
         // Initialize road route layers
         map.addSource('route-corridor', {
@@ -144,7 +127,23 @@ export default function Map({ origin, destination, matches = [], hasRequested = 
         renderMapElements(map);
       });
 
+      // Periodic check to ensure canvas is properly sized after DOM/layout stabilizes
+      const resizeTimer = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.resize();
+        }
+      }, 250);
+
+      const handleWindowResize = () => {
+        if (mapRef.current) {
+          mapRef.current.resize();
+        }
+      };
+      window.addEventListener('resize', handleWindowResize);
+
       return () => {
+        clearTimeout(resizeTimer);
+        window.removeEventListener('resize', handleWindowResize);
         markersRef.current.forEach(m => m.remove());
         markersRef.current = [];
         map.remove();
@@ -325,9 +324,20 @@ export default function Map({ origin, destination, matches = [], hasRequested = 
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+    <div style={{ position: 'relative', width: '100%', height, minHeight: typeof height === 'number' ? `${height}px` : height, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)', background: '#e2e8f0' }}>
       {/* Map Container */}
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+      <div 
+        ref={mapContainerRef} 
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%', 
+          height: '100%' 
+        }} 
+      />
 
       {/* Floating Tamil Nadu Boundary Tag */}
       <div style={{
