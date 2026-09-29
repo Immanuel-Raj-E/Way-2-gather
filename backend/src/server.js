@@ -10,6 +10,8 @@ dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const rideRoutes = require('./routes/rideRoutes');
 const safetyRoutes = require('./routes/safetyRoutes');
+const userRoutes = require('./routes/userRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -34,12 +36,21 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/rides', rideRoutes);
 app.use('/api/safety', safetyRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     service: 'SyncRide Backend API',
-    features: ['WomenSafetyBarrier', 'PartialDropoffSeatEngine', 'DynamicCostSplit', 'LiveSOS'],
+    features: [
+      'StrictAadharKYC_SHA256', 
+      'AutomatedHarassmentAutoBan', 
+      'WomenSafetyBarrier', 
+      'PartialDropoffSeatEngine', 
+      'DynamicCostSplit', 
+      'LiveSOS'
+    ],
     websockets: 'active'
   });
 });
@@ -50,7 +61,6 @@ io.on('connection', (socket) => {
 
   socket.on('join_ride_room', (rideId) => {
     socket.join(`ride_${rideId}`);
-    console.log(`[Socket.io]: Client ${socket.id} joined room: ride_${rideId}`);
   });
 
   socket.on('disconnect', () => {

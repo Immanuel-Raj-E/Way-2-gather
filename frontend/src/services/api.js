@@ -31,6 +31,16 @@ export const authService = {
   getProfile: () => api.get('/auth/profile')
 };
 
+export const userService = {
+  verifyKyc: (userId, kycData) => api.post(`/users/${userId}/verify-kyc`, kycData),
+  getUserProfile: (userId) => api.get(`/users/${userId}/profile`)
+};
+
+export const reviewService = {
+  submitReview: (reviewData) => api.post('/reviews/submit', reviewData),
+  getUserReviews: (userId) => api.get(`/reviews/user/${userId}`)
+};
+
 export const rideService = {
   getAvailableRides: () => api.get('/rides'),
   findMatches: (requestData) => api.post('/rides/match', requestData),
