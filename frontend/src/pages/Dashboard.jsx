@@ -6,8 +6,9 @@ import ActiveTripMap from '../components/ActiveTripMap';
 import Button from '../components/Button';
 import { 
   LayoutDashboard, Car, Clock, ShieldCheck, ShieldAlert, 
-  TrendingUp, Leaf, Cpu, CheckCircle2, UserX, Fingerprint, Star, Play, MapPin 
+  TrendingUp, Leaf, Cpu, CheckCircle2, UserX, Fingerprint, Star, Play, MapPin, UserPlus 
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Dashboard({ kycUser, onOpenKyc }) {
   const [rides, setRides] = useState([]);
@@ -15,14 +16,14 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [harassmentStrikes, setHarassmentStrikes] = useState(0);
   const [accountStatus, setAccountStatus] = useState(kycUser?.accountStatus || 'Active');
+  const [driverRating, setDriverRating] = useState(kycUser?.driverRating || 5.0);
+  const [seekerRating, setSeekerRating] = useState(kycUser?.seekerRating || 5.0);
 
-  // Step 3: Active Ride State for Map Transition
+  // Active Ride State for Map Transition
   const [activeRide, setActiveRide] = useState(null);
 
-  // Listen for Socket.io ride_started event
   useEffect(() => {
     socket.on('ride_started', (data) => {
-      console.log('[Socket.io UI Event]: ride_started received -> Transitioning to Mapbox Live Map', data);
       setActiveRide(data);
     });
 
@@ -37,19 +38,8 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
         const res = await rideService.getAvailableRides();
         setRides(res.data.rides || []);
       } catch (err) {
-        setRides([
-          {
-            _id: 'ride_blr_101',
-            driver: { name: 'Priya Sharma (KYC Verified)', rating: 4.95, gender: 'Female' },
-            origin: { address: 'Koramangala 4th Block', latitude: 12.9340, longitude: 77.6280 },
-            destination: { address: 'Electronic City Phase 1', latitude: 12.8450, longitude: 77.6600 },
-            departureTime: new Date(Date.now() + 15 * 60000).toISOString(),
-            availableSeats: 2,
-            pricePerSeat: 10,
-            status: 'scheduled',
-            isWomenOnly: true
-          }
-        ]);
+        console.warn('Failed to load rides from MongoDB:', err.message);
+        setRides([]);
       } finally {
         setLoading(false);
       }
@@ -58,28 +48,26 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
   }, []);
 
   const handleHostAcceptRide = (ride) => {
-    const rideId = ride._id || ride.id || 'ride_blr_101';
+    const rideId = ride._id || ride.id || 'ride_live_101';
     
-    // Emit accept_ride via Socket.io to trigger backend and mutual app transition
     socket.emit('accept_ride', {
       rideId,
-      hostId: 'host_priya_sharma',
-      seekerId: 'seeker_ananya_reddy',
+      hostId: ride.driver?._id || 'host_curr',
+      seekerId: 'seeker_live',
       rideDetails: {
-        origin: ride.origin,
-        destination: ride.destination,
-        hostName: ride.driver?.name || 'Priya Sharma',
-        vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City' }
+        origin: ride.startLocation ? { latitude: ride.startLocation.coordinates[1], longitude: ride.startLocation.coordinates[0], address: ride.startLocation.address } : { latitude: 13.0827, longitude: 80.2707, address: 'Chennai Central' },
+        destination: ride.endLocation ? { latitude: ride.endLocation.coordinates[1], longitude: ride.endLocation.coordinates[0], address: ride.endLocation.address } : { latitude: 12.8950, longitude: 80.2280, address: 'OMR Corridor' },
+        hostName: ride.driver?.name || 'Verified Host',
+        vehicle: ride.vehicle || { plateNumber: 'TN-01-AB-1234', model: 'Sedan' }
       }
     });
 
-    // Immediate state transition for local client
     setActiveRide({
       rideId,
-      hostLocation: [77.6280, 12.9340],
-      seekerLocation: [77.6600, 12.8450],
-      hostName: ride.driver?.name || 'Priya Sharma',
-      vehicle: { plateNumber: 'KA-01-MJ-8821', model: 'Honda City' }
+      hostLocation: ride.startLocation ? [ride.startLocation.coordinates[0], ride.startLocation.coordinates[1]] : [80.2707, 13.0827],
+      seekerLocation: ride.endLocation ? [ride.endLocation.coordinates[0], ride.endLocation.coordinates[1]] : [80.2280, 12.8950],
+      hostName: ride.driver?.name || 'Verified Host',
+      vehicle: ride.vehicle || { plateNumber: 'TN-01-AB-1234', model: 'Sedan' }
     });
   };
 
@@ -88,9 +76,12 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
       setHarassmentStrikes(data.safetyStatus.totalHarassmentReports);
       setAccountStatus(data.safetyStatus.accountStatus);
     }
+    if (data.updatedRatings) {
+      setDriverRating(data.updatedRatings.driverRating);
+      setSeekerRating(data.updatedRatings.seekerRating);
+    }
   };
 
-  // STEP 3: If activeRide is present, unmount normal dashboard and render Fullscreen Mapbox ActiveTripMap
   if (activeRide) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -104,171 +95,161 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Driver, Passenger & Safety Telemetry</h1>
-          <p style={{ color: 'var(--text-muted)' }}>
-            Real-time KYC authentication status, automated harassment strike monitoring, and corridor telemetry.
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)' }}>
+            User Dashboard & Verified Telemetry
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Live MongoDB driver routes, separate ratings, and ₹10/km cost-split telemetry in Tamil Nadu.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '0.8rem' }}>
           <Button variant="secondary" onClick={() => setIsReviewOpen(true)}>
-            <Star size={16} /> Submit Safety Feedback / Strike
+            <Star size={16} /> Submit Trip Feedback
           </Button>
+          <Link to="/create-ride" className="btn btn-primary">
+            + Offer a Ride (Host)
+          </Link>
         </div>
       </div>
 
-      {/* KYC & Safety Profile Card */}
-      <div className="glass-panel" style={{
-        background: accountStatus === 'Blocked'
-          ? 'rgba(244, 63, 94, 0.15)'
-          : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)',
-        border: accountStatus === 'Blocked' ? '2px solid var(--accent-rose)' : '1px solid var(--border-glow)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
+      {/* User Trust & Dual Rating Profile Card */}
+      <div className="white-panel" style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem',
+        borderLeft: '4px solid var(--primary)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
             width: 48, height: 48, borderRadius: '50%',
-            background: accountStatus === 'Blocked' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: accountStatus === 'Blocked' ? 'var(--accent-rose)' : 'var(--accent-green)'
+            background: 'var(--primary-light)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', color: 'var(--primary)'
           }}>
-            {accountStatus === 'Blocked' ? <UserX size={26} /> : <ShieldCheck size={26} />}
+            <ShieldCheck size={26} />
           </div>
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{kycUser?.name || 'Priya Sharma'}</h3>
-              {kycUser?.isVerified ? (
-                <span className="badge-score high" style={{ fontSize: '0.75rem' }}>
-                  ✓ Aadhar KYC Verified ({kycUser?.aadharMasked || '********8821'})
-                </span>
-              ) : (
-                <span className="badge-tag" style={{ color: 'var(--accent-rose)', cursor: 'pointer' }} onClick={onOpenKyc}>
-                  ⚠️ KYC Pending - Click to Verify
-                </span>
-              )}
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                {kycUser?.name || 'Verified Member'}
+              </h3>
+              <span className="badge-score">
+                ✓ Government ID Verified
+              </span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              SHA-256 Government ID Hash Secured • Safety Standing: <b>{accountStatus}</b>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              Tamil Nadu P2P Member • Account Standing: <b style={{ color: 'var(--primary)' }}>{accountStatus}</b>
             </div>
           </div>
         </div>
 
-        {/* Safety Harassment Strike Monitor */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Harassment Strikes (Max 5)</div>
-            <div style={{
-              fontSize: '1.3rem', fontWeight: 800,
-              color: harassmentStrikes >= 5 ? 'var(--accent-rose)' : harassmentStrikes > 2 ? 'var(--accent-amber)' : 'var(--accent-green)'
-            }}>
-              {harassmentStrikes} / 5 Strikes
+        {/* Dual Ratings Display: Driver Rating vs Seeker Rating */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Driver Rating</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>
+              ⭐ {driverRating.toFixed(1)} / 5.0
             </div>
           </div>
 
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Account Safety Status</div>
-            <span className="badge-tag" style={{
-              background: accountStatus === 'Blocked' ? 'rgba(244,63,94,0.2)' : 'rgba(16,185,129,0.2)',
-              color: accountStatus === 'Blocked' ? 'var(--accent-rose)' : 'var(--accent-green)',
-              fontWeight: 800
-            }}>
-              {accountStatus.toUpperCase()}
-            </span>
+          <div style={{ width: 1, height: 32, background: 'var(--border-color)' }} />
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Seeker Rating</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-sky)' }}>
+              ⭐ {seekerRating.toFixed(1)} / 5.0
+            </div>
+          </div>
+
+          <div style={{ width: 1, height: 32, background: 'var(--border-color)' }} />
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Safety Strikes</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: harassmentStrikes > 0 ? '#dc2626' : 'var(--primary)' }}>
+              {harassmentStrikes} / 5
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Match Cards with Host "Accept" Socket.io Handshake Trigger */}
-      <div className="glass-panel" style={{ border: '1px solid var(--border-glow)' }}>
+      {/* Live Available Rides (Host Handshake) */}
+      <div className="white-panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Pending Carpool Requests (Host Handshake)</h2>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              Active Scheduled Pools in Tamil Nadu
+            </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Click "Accept & Launch Live Map" to emit <code>accept_ride</code> via Socket.io and transition both users into Mapbox live tracking.
+              Live rides fetched dynamically from MongoDB. Rate is strictly <b>₹10 per km</b>.
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {rides.map((r) => (
-            <div
-              key={r._id}
-              style={{
-                background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)',
-                padding: '1.2rem', borderRadius: 12, display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-                  <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{r.driver?.name || 'Verified Host'}</span>
-                  {r.isWomenOnly && (
-                    <span className="badge-tag" style={{ color: 'var(--accent-rose)' }}>🛡️ Women-Only</span>
-                  )}
-                  <span className="badge-score high" style={{ fontSize: '0.7rem' }}>99.2% Fit</span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Route: <b>{r.origin?.address}</b> ➔ <b>{r.destination?.address}</b>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', marginTop: '0.2rem' }}>
-                  Departure: {formatDateTime(r.departureTime)} • {r.availableSeats} seats open
-                </div>
-              </div>
-
-              {/* Host Socket Accept Trigger */}
-              <Button
-                variant="success"
-                onClick={() => handleHostAcceptRide(r)}
-                style={{ padding: '0.65rem 1.3rem', fontSize: '0.95rem' }}
+        {rides.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: '#f8fafc', borderRadius: 10, border: '1px dashed var(--border-color)' }}>
+            <Car size={36} color="var(--text-muted)" style={{ margin: '0 auto 0.5rem' }} />
+            <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>No Active Rides Found</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              Be the first to publish a ride in Chennai or across Tamil Nadu!
+            </p>
+            <Link to="/create-ride" className="btn btn-primary" style={{ display: 'inline-flex' }}>
+              Publish New Route (Host)
+            </Link>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            {rides.map((r) => (
+              <div
+                key={r._id}
+                style={{
+                  background: '#ffffff', border: '1px solid var(--border-color)',
+                  padding: '1.1rem', borderRadius: 10, display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', flexWrap: 'wrap', gap: '1rem', boxShadow: 'var(--shadow-sm)'
+                }}
               >
-                <Play size={16} fill="white" /> Accept & Launch Live Map (Socket.io)
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
+                      {r.driver?.name || 'Verified Host'}
+                    </span>
+                    <span className="badge-score" style={{ fontSize: '0.75rem' }}>
+                      ⭐ Driver: {r.driver?.driverRating || 5.0}
+                    </span>
+                    {r.isWomenOnly && (
+                      <span className="badge-tag" style={{ color: '#be123c', background: '#ffe4e6' }}>
+                        🛡️ Women-Only
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Route: <b>{r.startLocation?.address || r.origin?.address || 'Origin'}</b> ➔ <b>{r.endLocation?.address || r.destination?.address || 'Destination'}</b>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '0.2rem', fontWeight: 600 }}>
+                    Departure: {formatDateTime(r.departureTime)} • {r.availableSeats} seats open • ₹10/km
+                  </div>
+                </div>
 
-      {/* Metrics Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-        <div className="glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <Fingerprint size={16} color="var(--accent-green)" /> Identity Security
+                <Button
+                  variant="primary"
+                  onClick={() => handleHostAcceptRide(r)}
+                  style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+                >
+                  <Play size={15} fill="white" /> Launch Live Map
+                </Button>
+              </div>
+            ))}
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--accent-green)' }}>
-            100% KYC
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>SHA-256 Aadhar Hash</div>
-        </div>
-
-        <div className="glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <ShieldAlert size={16} color="var(--accent-rose)" /> Automated Ban Rule
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--accent-rose)' }}>
-            5 Strikes
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Instant Irreversible Ban</div>
-        </div>
-
-        <div className="glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <Leaf size={16} color="var(--accent-green)" /> Total CO₂ Offset
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, marginTop: '0.5rem', color: 'var(--accent-green)' }}>54.2 kg</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>0.192 kg CO₂/km formula</div>
-        </div>
+        )}
       </div>
 
       {/* Review Modal */}
       <ReviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
-        targetUser={{ id: 'mock_target_1', name: 'Rogue Passenger' }}
+        targetUser={{ id: 'mock_target_1', name: 'Fellow Traveler' }}
         onReviewSubmitted={handleReviewSubmitted}
       />
     </div>

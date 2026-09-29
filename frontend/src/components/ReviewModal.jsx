@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { reviewService } from '../services/api';
 import Button from './Button';
-import { Star, ShieldAlert, AlertTriangle, CheckCircle2, UserX } from 'lucide-react';
+import { Star, ShieldAlert, CheckCircle2, UserX, User, Car } from 'lucide-react';
 
 export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onReviewSubmitted }) {
   const [rating, setRating] = useState(5);
+  const [targetRole, setTargetRole] = useState('driver'); // 'driver' or 'seeker'
   const [isHarassment, setIsHarassment] = useState(false);
   const [harassmentCategory, setHarassmentCategory] = useState('Safety Violation');
   const [comments, setComments] = useState('');
@@ -21,6 +22,7 @@ export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onRev
         targetUserId: targetUser?.id || targetUser?._id || 'mock_target_user_1',
         tripId: tripId || 'trip_demo_101',
         rating: Number(rating),
+        targetRole,
         isHarassment: Boolean(isHarassment),
         harassmentCategory: isHarassment ? harassmentCategory : 'None',
         comments
@@ -39,41 +41,79 @@ export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onRev
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '500px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-          <Star size={24} color="#fbbf24" fill="#fbbf24" />
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Trip Feedback & Safety Review</h3>
+          <Star size={24} color="#f59e0b" fill="#f59e0b" />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+            Trip Review & Feedback
+          </h3>
         </div>
 
         {result ? (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             {result.safetyStatus?.autoBanTriggered ? (
-              <div style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid var(--accent-rose)', padding: '1.2rem', borderRadius: 12, marginBottom: '1.2rem' }}>
-                <UserX size={44} color="var(--accent-rose)" style={{ margin: '0 auto 0.75rem' }} />
-                <h4 style={{ color: 'var(--accent-rose)', fontWeight: 800, fontSize: '1.15rem' }}>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1.2rem', borderRadius: 12, marginBottom: '1.2rem' }}>
+                <UserX size={44} color="#dc2626" style={{ margin: '0 auto 0.75rem' }} />
+                <h4 style={{ color: '#b91c1c', fontWeight: 800, fontSize: '1.15rem' }}>
                   AUTOMATED SAFETY BAN TRIGGERED (5 Strikes)
                 </h4>
-                <p style={{ fontSize: '0.85rem', color: '#fecdd3', marginTop: '0.4rem' }}>
-                  Target user has accumulated 5 severe harassment reports. Their account is <b>PERMANENTLY BLOCKED</b> and all future rides have been cancelled.
+                <p style={{ fontSize: '0.85rem', color: '#7f1d1d', marginTop: '0.4rem' }}>
+                  Target user has reached 5 severe safety reports and has been <b>PERMANENTLY BLOCKED</b> from way-2-gather.
                 </p>
               </div>
             ) : (
               <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
-                <CheckCircle2 size={48} color="var(--accent-green)" style={{ margin: '0 auto 0.5rem' }} />
-                <h4 style={{ fontWeight: 700, fontSize: '1.1rem' }}>Thank you for your feedback!</h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  Your review helps maintain safety standards across the SyncRide network.
+                <CheckCircle2 size={48} color="#059669" style={{ margin: '0 auto 0.5rem' }} />
+                <h4 style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-main)' }}>Rating Submitted!</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.3rem' }}>
+                  Updated {targetRole === 'driver' ? 'Driver Rating' : 'Seeker Rating'}: ⭐ <b>{result.updatedRatings?.[targetRole === 'driver' ? 'driverRating' : 'seekerRating'] || rating}</b>
                 </p>
               </div>
             )}
 
-            <Button onClick={onClose} style={{ width: '100%' }}>
+            <Button onClick={onClose} variant="primary" style={{ width: '100%' }}>
               Close
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Target Role Selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-                Rate Driver / Passenger: {targetUser?.name || 'Traveler'}
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
+                You are reviewing:
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setTargetRole('driver')}
+                  style={{
+                    padding: '0.5rem', borderRadius: 8,
+                    border: targetRole === 'driver' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                    background: targetRole === 'driver' ? 'var(--primary-light)' : '#ffffff',
+                    color: targetRole === 'driver' ? '#065f46' : 'var(--text-muted)',
+                    fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                  }}
+                >
+                  <Car size={16} /> Driver (Host)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetRole('seeker')}
+                  style={{
+                    padding: '0.5rem', borderRadius: 8,
+                    border: targetRole === 'seeker' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                    background: targetRole === 'seeker' ? 'var(--primary-light)' : '#ffffff',
+                    color: targetRole === 'seeker' ? '#065f46' : 'var(--text-muted)',
+                    fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                  }}
+                >
+                  <User size={16} /> Passenger (Seeker)
+                </button>
+              </div>
+            </div>
+
+            {/* Stars */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
+                Score:
               </label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -87,7 +127,7 @@ export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onRev
                     }}
                     style={{
                       background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: '1.6rem', color: star <= rating ? '#fbbf24' : 'rgba(255,255,255,0.2)'
+                      fontSize: '1.75rem', color: star <= rating ? '#f59e0b' : '#cbd5e1'
                     }}
                   >
                     ★
@@ -96,10 +136,10 @@ export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onRev
               </div>
             </div>
 
-            {/* Harassment Checkbox Flag */}
+            {/* Harassment Checkbox */}
             <div style={{
-              background: isHarassment ? 'rgba(244, 63, 94, 0.12)' : 'rgba(0,0,0,0.3)',
-              border: isHarassment ? '1px solid var(--accent-rose)' : '1px solid var(--border-color)',
+              background: isHarassment ? '#fef2f2' : '#f8fafc',
+              border: isHarassment ? '1px solid #fecaca' : '1px solid var(--border-color)',
               padding: '0.85rem', borderRadius: 8
             }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
@@ -107,50 +147,43 @@ export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onRev
                   type="checkbox"
                   checked={isHarassment}
                   onChange={(e) => setIsHarassment(e.target.checked)}
-                  style={{ width: 18, height: 18, accentColor: 'var(--accent-rose)' }}
+                  style={{ width: 18, height: 18, accentColor: '#dc2626' }}
                 />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isHarassment ? 'var(--accent-rose)' : 'var(--text-main)' }}>
-                  ⚠️ Report Severe Harassment / Safety Violation
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isHarassment ? '#b91c1c' : 'var(--text-main)' }}>
+                  ⚠️ Report Harassment / Dangerous Behavior
                 </span>
               </label>
 
               {isHarassment && (
-                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Harassment Category:</label>
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   <select
                     value={harassmentCategory}
                     onChange={(e) => setHarassmentCategory(e.target.value)}
-                    style={{
-                      padding: '0.5rem', borderRadius: 6, background: 'rgba(0,0,0,0.5)',
-                      border: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.85rem'
-                    }}
+                    className="input-light"
+                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
                   >
-                    <option value="Verbal">Verbal Abuse / Intimidation</option>
+                    <option value="Verbal">Verbal Misconduct</option>
                     <option value="Inappropriate Behavior">Inappropriate Behavior</option>
-                    <option value="Safety Violation">Dangerous Driving / Route Hijack</option>
+                    <option value="Safety Violation">Route Deviation / Reckless Driving</option>
                     <option value="Physical">Physical Threat</option>
                   </select>
-                  <div style={{ fontSize: '0.7rem', color: '#fecdd3' }}>
-                    Note: Rating ≤ 2 + Harassment increments safety strike counter. 5 strikes trigger an irreversible <b>Automated Permanent Ban</b>.
-                  </div>
+                  <span style={{ fontSize: '0.7rem', color: '#991b1b' }}>
+                    Note: Rating ≤ 2 + Harassment assigns a severe strike. 5 strikes trigger an automated permanent ban.
+                  </span>
                 </div>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
                 Comments (Optional)
               </label>
               <textarea
                 rows={3}
+                className="input-light"
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder="Describe your trip experience..."
-                style={{
-                  width: '100%', padding: '0.65rem 0.85rem', borderRadius: 8,
-                  background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)', fontSize: '0.85rem'
-                }}
+                placeholder="Share your experience..."
               />
             </div>
 
@@ -159,7 +192,7 @@ export default function ReviewModal({ isOpen, onClose, targetUser, tripId, onRev
                 Cancel
               </Button>
               <Button type="submit" variant={isHarassment ? 'danger' : 'primary'} disabled={loading} style={{ flex: 2 }}>
-                {loading ? 'Processing Review...' : isHarassment ? 'Submit Safety Strike' : 'Submit Review'}
+                {loading ? 'Submitting...' : 'Submit Rating'}
               </Button>
             </div>
           </form>

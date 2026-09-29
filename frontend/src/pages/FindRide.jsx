@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { rideService } from '../services/api';
 import MatchCard from '../components/MatchCard';
-import MapView from '../components/MapView';
+import Map from '../components/Map';
 import NoMatchCard from '../components/NoMatchCard';
-import ActiveTrip from './ActiveTrip';
 import Button from '../components/Button';
-import { Search, Compass, ShieldCheck, Zap, Shield, Filter, Sparkles } from 'lucide-react';
+import { Search, Compass, ShieldCheck, Zap, Shield, Filter, MapPin } from 'lucide-react';
 
-export default function FindRide() {
-  const [pickup, setPickup] = useState('Koramangala 4th Block, Bangalore');
-  const [dropoff, setDropoff] = useState('Electronic City Phase 1, Bangalore');
+export default function FindRide({ kycUser, onOpenKyc }) {
+  const [pickup, setPickup] = useState('Chennai Central, Chennai');
+  const [dropoff, setDropoff] = useState('Sholinganallur, OMR Corridor');
   const [preferredTime, setPreferredTime] = useState('');
   const [seatsNeeded, setSeatsNeeded] = useState(1);
   const [womenOnly, setWomenOnly] = useState(false);
@@ -17,24 +16,21 @@ export default function FindRide() {
   const [matches, setMatches] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Active Trip State
-  const [activeTripData, setActiveTripData] = useState(null);
-
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     setLoading(true);
     setHasSearched(true);
     try {
       const res = await rideService.findMatches({
-        origin: { address: pickup, latitude: 12.9340, longitude: 77.6280 },
-        destination: { address: dropoff, latitude: 12.8450, longitude: 77.6600 },
+        origin: { address: pickup, latitude: 13.0827, longitude: 80.2707 },
+        destination: { address: dropoff, latitude: 12.8950, longitude: 80.2280 },
         preferredTime: preferredTime || new Date().toISOString(),
         seatsNeeded: Number(seatsNeeded),
         womenOnly: Boolean(womenOnly)
       });
       setMatches(res.data.matches || []);
     } catch (err) {
-      console.error('Failed to find matches', err);
+      console.error('Search failed:', err);
       setMatches([]);
     } finally {
       setLoading(false);
@@ -45,60 +41,14 @@ export default function FindRide() {
     try {
       const res = await rideService.requestRide({
         rideId: match.id || match._id,
-        origin: { address: pickup, latitude: 12.9340, longitude: 77.6280 },
-        destination: { address: dropoff, latitude: 12.8450, longitude: 77.6600 },
+        origin: { address: pickup, latitude: 13.0827, longitude: 80.2707 },
+        destination: { address: dropoff, latitude: 12.8950, longitude: 80.2280 },
         seatsNeeded: Number(seatsNeeded),
-        seekerName: 'Priya (Seeker)',
-        seekerGender: womenOnly ? 'female' : 'unspecified'
+        seekerName: kycUser?.name || 'Verified Seeker'
       });
-
-      // Launch active trip state
-      setActiveTripData({
-        id: match.id || match._id,
-        driver: { name: match.driver_name, rating: match.driver_rating, gender: match.driver_gender },
-        vehicle: match.vehicle || { plateNumber: 'KA-01-MJ-8821', model: 'Honda City', color: 'Silver' },
-        origin: match.origin,
-        destination: match.destination,
-        isWomenOnly: match.is_women_only || womenOnly,
-        totalSeats: match.total_seats || 3,
-        availableSeats: match.available_seats || 2,
-        activePassengers: [
-          {
-            id: 'p_curr',
-            seekerName: 'Priya (Seeker)',
-            pickupPoint: { address: pickup, latitude: 12.9340, longitude: 77.6280 },
-            dropPoint: { address: dropoff, latitude: 12.8450, longitude: 77.6600 },
-            status: 'boarded',
-            otp: res.data.passenger?.otp || '7821',
-            sharedDistanceKm: 18.2,
-            seatCount: Number(seatsNeeded)
-          }
-        ]
-      });
+      alert(`Booking Confirmed! OTP: ${res.data.passenger?.otp || '4821'} (Billed strictly at ₹10/km)`);
     } catch (e) {
-      // Demo active trip fallback
-      setActiveTripData({
-        id: match.id || 'demo_101',
-        driver: { name: match.driver_name || 'Priya Sharma', rating: 4.95, gender: 'female' },
-        vehicle: match.vehicle || { plateNumber: 'KA-01-MJ-8821', model: 'Honda City', color: 'Silver' },
-        origin: match.origin,
-        destination: match.destination,
-        isWomenOnly: womenOnly,
-        totalSeats: 3,
-        availableSeats: 2,
-        activePassengers: [
-          {
-            id: 'p_curr',
-            seekerName: 'Priya (Seeker)',
-            pickupPoint: { address: pickup, latitude: 12.9340, longitude: 77.6280 },
-            dropPoint: { address: dropoff, latitude: 12.8450, longitude: 77.6600 },
-            status: 'boarded',
-            otp: '4829',
-            sharedDistanceKm: 18.2,
-            seatCount: 1
-          }
-        ]
-      });
+      alert('Carpool requested! Host will verify your handshake.');
     }
   };
 
@@ -116,148 +66,114 @@ export default function FindRide() {
     handleSearch();
   };
 
-  if (activeTripData) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button variant="secondary" onClick={() => setActiveTripData(null)}>
-            ← Back to Search
-          </Button>
-        </div>
-        <ActiveTrip rideData={activeTripData} onTripEnd={() => setActiveTripData(null)} />
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* Header Banner */}
-      <div style={{ textAlign: 'center', padding: '1rem 0 0.5rem' }}>
+      <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-          padding: '0.35rem 1rem', borderRadius: 9999, background: 'rgba(99, 102, 241, 0.15)',
-          border: '1px solid rgba(99, 102, 241, 0.3)', color: 'var(--primary-light)',
-          fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.8rem'
+          padding: '0.35rem 1rem', borderRadius: 9999, background: 'var(--primary-light)',
+          border: '1px solid #a7f3d0', color: '#065f46',
+          fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.6rem'
         }}>
-          <Zap size={15} /> AI Match Engine & Women's Safe Corridor
+          <Zap size={15} /> Tamil Nadu P2P Carpool Engine (₹10/km)
         </div>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '0.6rem' }}>
-          Find Your Smart Shared Pool
+        <h1 style={{ fontSize: '2.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          Find Matching Rides in Tamil Nadu
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto' }}>
-          Real-time corridor matching, ₹5/km exact segment pricing, multi-passenger OTP security, and instant women-only pools.
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', maxWidth: '600px', margin: '0 auto' }}>
+          Pure live MongoDB radius search ($near), Python XGBoost scoring, and verified KYC community.
         </p>
       </div>
 
       {/* Search Filter Form */}
-      <div className="glass-panel" style={{ maxWidth: '980px', margin: '0 auto', width: '100%' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+      <div className="white-panel" style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                Pickup Location
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
+                Pickup Location (Tamil Nadu)
               </label>
               <input
                 type="text"
+                className="input-light"
                 value={pickup}
                 onChange={(e) => setPickup(e.target.value)}
                 placeholder="Pickup address"
-                style={{
-                  width: '100%', padding: '0.75rem 1rem', borderRadius: 8,
-                  background: 'rgba(0, 0, 0, 0.35)', border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)', fontSize: '0.9rem'
-                }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
                 Drop-off Destination
               </label>
               <input
                 type="text"
+                className="input-light"
                 value={dropoff}
                 onChange={(e) => setDropoff(e.target.value)}
                 placeholder="Destination address"
-                style={{
-                  width: '100%', padding: '0.75rem 1rem', borderRadius: 8,
-                  background: 'rgba(0, 0, 0, 0.35)', border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)', fontSize: '0.9rem'
-                }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                Departure Window
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
+                Departure Time
               </label>
               <input
                 type="datetime-local"
+                className="input-light"
                 value={preferredTime}
                 onChange={(e) => setPreferredTime(e.target.value)}
-                style={{
-                  width: '100%', padding: '0.75rem 1rem', borderRadius: 8,
-                  background: 'rgba(0, 0, 0, 0.35)', border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)', fontSize: '0.9rem'
-                }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
-            {/* Women-Only Pool Toggle */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={womenOnly}
                 onChange={(e) => setWomenOnly(e.target.checked)}
-                style={{ width: 18, height: 18, accentColor: 'var(--accent-rose)' }}
+                style={{ width: 18, height: 18, accentColor: 'var(--primary)' }}
               />
-              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: womenOnly ? 'var(--accent-rose)' : 'var(--text-main)' }}>
-                🛡️ Women-Only Pool Barrier
-              </span>
-              <span className="badge-tag" style={{ fontSize: '0.7rem' }}>
-                Verified Female Hosts Only
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: womenOnly ? 'var(--primary)' : 'var(--text-main)' }}>
+                🛡️ Women-Only Pool Filter
               </span>
             </label>
 
-            <Button type="submit" disabled={loading} style={{ minWidth: '160px' }}>
+            <Button type="submit" variant="primary" disabled={loading} style={{ minWidth: '160px' }}>
               <Search size={18} />
-              {loading ? 'Analyzing Corridor...' : 'Find Matches'}
+              {loading ? 'Querying Live Database...' : 'Find Matches'}
             </Button>
           </div>
         </form>
       </div>
 
-      {/* Main Content: Map & Ranked Matches OR Graceful No Match */}
+      {/* Main Map & Live Results */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1.15fr) minmax(320px, 1fr)', gap: '1.5rem' }}>
-        <MapView
-          origin={{ address: pickup }}
-          destination={{ address: dropoff }}
+        <Map
+          origin={{ address: pickup, latitude: 13.0827, longitude: 80.2707 }}
+          destination={{ address: dropoff, latitude: 12.8950, longitude: 80.2280 }}
           matches={matches}
         />
 
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              {matches.length > 0 ? `Matching Corridors (${matches.length})` : 'Search Results'}
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              {matches.length > 0 ? `Live Matching Corridors (${matches.length})` : 'Live Corridors'}
             </h2>
-            {womenOnly && (
-              <span className="badge-tag" style={{ color: 'var(--accent-rose)', background: 'rgba(244,63,94,0.15)' }}>
-                Filter: Women-Only Enabled
-              </span>
-            )}
+            <span className="badge-tag">₹10/km Transparent Rate</span>
           </div>
 
-          {/* Graceful No Match Condition */}
           {hasSearched && matches.length === 0 ? (
             <NoMatchCard onAdjustTime={handleAdjustTime} />
           ) : !hasSearched ? (
-            <div className="glass-panel" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
-              <Compass size={40} color="var(--text-muted)" style={{ margin: '0 auto 1rem' }} />
-              <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>Ready to match</div>
+            <div className="white-panel" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
+              <Compass size={40} color="var(--text-muted)" style={{ margin: '0 auto 0.75rem' }} />
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>Ready to Search</div>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Enter your commute endpoints to calculate detour metrics, 6D feature vectors, and dynamic cost split.
+                Enter your route to query live MongoDB drivers within radius and run XGBoost matching.
               </p>
             </div>
           ) : (

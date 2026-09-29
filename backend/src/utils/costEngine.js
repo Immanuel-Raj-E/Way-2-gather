@@ -16,28 +16,30 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Calculates dynamic cost split based strictly on the exact segment the seeker occupied a seat.
+ * Calculates dynamic cost split based on the exact geographic segment occupied by the seeker.
+ * Pricing Rule: ₹10 per km
  * 
- * @param {number} totalDistanceKm - Total host corridor distance
- * @param {number} sharedDistanceKm - Distance between seeker pickup and drop-off
- * @param {number} ratePerKm - Rate per kilometer (default: ₹5/km)
- * @param {number} baseFare - Base booking convenience fare (default: ₹20)
+ * @param {number} totalDistanceKm - Total host route distance
+ * @param {number} sharedDistanceKm - Exact distance seeker occupied a seat
+ * @param {number} ratePerKm - Rate per kilometer (strictly ₹10/km)
+ * @param {number} baseFare - Base booking convenience fare (default: ₹0 or ₹20)
  * @param {number} seatCount - Number of seats booked
- * @returns {object} Cost breakdown with total billed, solo taxi comparison, and savings
+ * @returns {object} Cost breakdown
  */
 function calculateCostSplit(
   totalDistanceKm,
   sharedDistanceKm,
-  ratePerKm = 5,
-  baseFare = 20,
+  ratePerKm = 10, // Pricing rule: ₹10 per km
+  baseFare = 0,
   seatCount = 1
 ) {
   const safeSharedKm = Math.max(0.1, Number(sharedDistanceKm) || 0.1);
+  // Total Seeker contribution = Shared Distance (km) * 10
   const distanceFare = safeSharedKm * ratePerKm * seatCount;
   const totalBilled = Math.round((baseFare + distanceFare) * 100) / 100;
   
-  // Standard solo cab rate comparison (approx ₹18/km + ₹50 base)
-  const soloTaxiEstimate = Math.round((50 + safeSharedKm * 18 * seatCount) * 100) / 100;
+  // Standard solo cab rate comparison (approx ₹22/km + ₹60 base in Tamil Nadu)
+  const soloTaxiEstimate = Math.round((60 + safeSharedKm * 22 * seatCount) * 100) / 100;
   const savings = Math.max(0, Math.round((soloTaxiEstimate - totalBilled) * 100) / 100);
   const co2SavedKg = Math.round(safeSharedKm * 0.192 * seatCount * 100) / 100;
 

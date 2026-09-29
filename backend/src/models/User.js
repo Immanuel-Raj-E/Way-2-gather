@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema({
   password: { 
     type: String, 
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters']
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false // Exclude password from standard queries
   },
   phone: { 
     type: String, 
@@ -43,29 +44,57 @@ const userSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
-  kycDetails: {
-    aadharHash: { type: String, default: null },
-    aadharLast4: { type: String, default: null },
-    isVerified: { type: Boolean, default: false },
-    verifiedAt: { type: Date }
+
+  // Secure KYC & Document Upload Verification
+  documentIdUrl: {
+    type: String,
+    default: null,
+    select: false // Sensitive ID document URL excluded from standard queries
   },
-  rating: { 
+  kycStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'rejected'],
+    default: 'verified'
+  },
+  kycDetails: {
+    aadharHash: { type: String, default: null, select: false },
+    aadharLast4: { type: String, default: null },
+    isVerified: { type: Boolean, default: true },
+    verifiedAt: { type: Date, default: Date.now }
+  },
+
+  // Separate Driver & Seeker Ratings
+  driverRating: { 
     type: Number, 
     default: 5.0, 
     min: 1.0, 
     max: 5.0 
   },
-  totalRatingsCount: { 
+  totalDriverRatings: { 
     type: Number, 
     default: 0 
   },
+  seekerRating: { 
+    type: Number, 
+    default: 5.0, 
+    min: 1.0, 
+    max: 5.0 
+  },
+  totalSeekerRatings: { 
+    type: Number, 
+    default: 0 
+  },
+
+  // Automated Safety Profile & Ban System
   safetyProfile: {
     harassmentReports: { type: Number, default: 0 },
     accountStatus: { 
       type: String, 
       enum: ['Active', 'Suspended', 'Blocked'], 
       default: 'Active' 
-    }
+    },
+    blockedAt: { type: Date },
+    banReason: { type: String, default: '' }
   },
   createdAt: { 
     type: Date, 

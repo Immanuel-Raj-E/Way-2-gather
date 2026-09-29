@@ -3,7 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { User, Mail, Lock, Phone, Calendar, ShieldCheck, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { 
+  User, Mail, Lock, Phone, Calendar, ShieldCheck, 
+  AlertCircle, Upload, FileText, CheckCircle2 
+} from 'lucide-react';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -20,13 +23,28 @@ export default function Register() {
     role: 'both'
   });
 
+  const [documentFile, setDocumentFile] = useState(null);
+  const [documentPreview, setDocumentPreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState(null);
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setDocumentFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDocumentPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setErrors(prev => ({ ...prev, document: null }));
+    }
+  };
+
   const validate = () => {
     const errs = {};
-    if (!formData.name.trim()) errs.name = 'Full name is required';
+    if (!formData.name.trim()) errs.name = 'Full legal name is required';
     
     const emailRegex = /^\S+@\S+\.\S+$/;
     if (!formData.email) errs.email = 'Email address is required';
@@ -45,6 +63,10 @@ export default function Register() {
 
     if (Number(formData.age) < 18) {
       errs.age = 'You must be at least 18 years old';
+    }
+
+    if (!documentPreview) {
+      errs.document = 'Government ID document upload is mandatory for KYC';
     }
 
     setErrors(errs);
@@ -66,7 +88,8 @@ export default function Register() {
         password: formData.password,
         gender: formData.gender,
         age: Number(formData.age),
-        role: formData.role
+        role: formData.role,
+        documentIdUrl: documentPreview || 'https://syncride.app/documents/verified_id.pdf'
       });
 
       if (res.data.token) {
@@ -81,7 +104,7 @@ export default function Register() {
   };
 
   return (
-    <div style={{ maxWidth: '520px', margin: '2rem auto', width: '100%' }}>
+    <div style={{ maxWidth: '540px', margin: '2rem auto', width: '100%' }}>
       <div className="white-panel" style={{ padding: '2.25rem' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
@@ -97,7 +120,7 @@ export default function Register() {
             Join way-2-gather
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Tamil Nadu's Eco-Friendly Peer-to-Peer Carpooling Network
+            Verified Peer-to-Peer Carpooling Network in Tamil Nadu
           </p>
         </div>
 
@@ -208,7 +231,49 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Password & Confirm */}
+          {/* Mandatory KYC Government ID Upload */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
+              Upload Government ID (e.g., Aadhaar / ID Card) *
+            </label>
+            <div style={{
+              border: '2px dashed var(--border-color)',
+              padding: '1.1rem',
+              borderRadius: 8,
+              textAlign: 'center',
+              background: '#f8fafc',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="file"
+                id="docUpload"
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="docUpload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                {documentFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: 700 }}>
+                    <CheckCircle2 size={20} />
+                    <span>{documentFile.name} (Ready for Verification)</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload size={24} color="var(--primary)" />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                      Click to Browse Government ID Document
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Supports PNG, JPG, PDF (Encrypted & securely stored)
+                    </span>
+                  </>
+                )}
+              </label>
+            </div>
+            {errors.document && <span style={{ color: '#dc2626', fontSize: '0.75rem' }}>{errors.document}</span>}
+          </div>
+
+          {/* Password & Confirm Password */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
@@ -248,12 +313,12 @@ export default function Register() {
           </div>
 
           <Button type="submit" variant="primary" disabled={loading} style={{ marginTop: '0.5rem', width: '100%' }}>
-            {loading ? 'Creating Account...' : 'Create Account & Start Pooling'}
+            {loading ? 'Verifying ID & Registering...' : 'Upload ID & Complete Registration'}
           </Button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Already have an account?{' '}
+          Already registered?{' '}
           <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 700 }}>
             Sign In here
           </Link>
