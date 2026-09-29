@@ -12,6 +12,31 @@ export const TN_BOUNDS = [
   [80.35, 13.55] // NE: Chennai / Pulicat Lake boundary
 ];
 
+const CARTO_LIGHT_STYLE = {
+  version: 8,
+  sources: {
+    'carto-voyager': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors © CARTO'
+    }
+  },
+  layers: [
+    {
+      id: 'carto-voyager-layer',
+      type: 'raster',
+      source: 'carto-voyager',
+      minzoom: 0,
+      maxzoom: 20
+    }
+  ]
+};
+
 export const CHENNAI_CENTER = [80.2707, 13.0827];
 
 export default function Map({ origin, destination, matches = [], height = '380px' }) {
@@ -24,10 +49,12 @@ export default function Map({ origin, destination, matches = [], height = '380px
     if (!mapContainerRef.current) return;
 
     try {
-      // Initialize Mapbox with Strict Tamil Nadu maxBounds and Light Daytime Theme
+      // Use Carto Voyager light style or Mapbox if valid token
+      const useMapboxStyle = MAPBOX_TOKEN && MAPBOX_TOKEN.length > 50 && !MAPBOX_TOKEN.includes('dummy');
+      
       const map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: 'mapbox://styles/mapbox/light-v11', // Clean Daytime Light Style
+        style: CARTO_LIGHT_STYLE,
         center: CHENNAI_CENTER,
         zoom: 10,
         maxBounds: TN_BOUNDS, // Strictly restricts panning & zooming to Tamil Nadu only!

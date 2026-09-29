@@ -9,7 +9,30 @@ import {
 } from 'lucide-react';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '5ntZgp5HiwKhO1Dd4AEn';
-mapboxgl.accessToken = MAPBOX_TOKEN;
+const CARTO_DARK_STYLE = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png'
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors © CARTO'
+    }
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 20
+    }
+  ]
+};
 
 export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTrip }) {
   const mapContainerRef = useRef(null);
@@ -41,7 +64,7 @@ export default function ActiveTripMap({ activeRide, userRole = 'seeker', onEndTr
     try {
       const map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: 'mapbox://styles/mapbox/dark-v11', // Sleek dark map style
+        style: CARTO_DARK_STYLE,
         center: [
           (hostLocation[0] + seekerLocation[0]) / 2,
           (hostLocation[1] + seekerLocation[1]) / 2
