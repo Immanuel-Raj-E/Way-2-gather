@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { rideService } from '../services/api';
+import LocationAutocomplete from '../components/LocationAutocomplete';
 import MatchCard from '../components/MatchCard';
 import Map from '../components/Map';
 import NoMatchCard from '../components/NoMatchCard';

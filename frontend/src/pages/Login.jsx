@@ -137,43 +137,7 @@ export default function Login() {
           </Button>
         </form>
 
-        {/* Quick Demo Credentials */}
-        <div style={{ marginTop: '1.5rem', background: '#f8fafc', padding: '0.9rem', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Quick 1-Click Test Accounts:
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={() => setFormData({ email: 'ap8161@gmail.com', password: 'password123' })}
-              style={{
-                padding: '0.45rem 0.6rem', background: '#ffffff', border: '1px solid var(--border-color)',
-                borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left',
-                color: 'var(--text-main)'
-              }}
-            >
-              👤 <b>Arul Prakash</b>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ap8161@gmail.com</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormData({ email: 'b0314@gmail.com', password: 'password123' })}
-              style={{
-                padding: '0.45rem 0.6rem', background: '#ffffff', border: '1px solid var(--border-color)',
-                borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left',
-                color: 'var(--text-main)'
-              }}
-            >
-              👤 <b>Bishwanth</b>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>b0314@gmail.com</div>
-            </button>
-          </div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginTop: '0.4rem', fontWeight: 600 }}>
-            Password for both accounts: <code style={{ background: '#e2e8f0', padding: '1px 4px', borderRadius: 4 }}>password123</code>
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           Don't have an account?{' '}
           <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 700 }}>
             Register here
