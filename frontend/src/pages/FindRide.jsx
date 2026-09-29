@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { rideService } from '../services/api';
 import LocationAutocomplete from '../components/LocationAutocomplete';
 import MatchCard from '../components/MatchCard';
@@ -96,7 +96,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
           Find Matching Rides in Tamil Nadu
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', maxWidth: '600px', margin: '0 auto' }}>
-          Pure live MongoDB radius search ($near), Python XGBoost scoring, and verified KYC community.
+          Affordable ₹10/km carpooling with verified commuters along your daily route.
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
-                Pickup Location (Tamil Nadu NLP)
+                Pickup Location
               </label>
               <LocationAutocomplete
                 value={pickup}
@@ -123,7 +123,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>
-                Drop-off Destination (Tamil Nadu NLP)
+                Drop-off Destination
               </label>
               <LocationAutocomplete
                 value={dropoff}
@@ -156,7 +156,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
 
             <Button type="submit" variant="primary" disabled={loading} style={{ minWidth: '160px' }}>
               <Search size={18} />
-              {loading ? 'Querying Live Database...' : 'Find Matches'}
+              {loading ? 'Searching Rides...' : 'Find Matches'}
             </Button>
           </div>
         </form>
@@ -182,7 +182,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
-              {matches.length > 0 ? `Live Matching Corridors (${matches.length})` : 'Live Corridors'}
+              {matches.length > 0 ? `Available Corridors (${matches.length})` : 'Available Corridors'}
             </h2>
             <span className="badge-tag">₹10/km Transparent Rate</span>
           </div>
@@ -194,7 +194,7 @@ export default function FindRide({ kycUser, onOpenKyc }) {
               <Compass size={40} color="var(--text-muted)" style={{ margin: '0 auto 0.75rem' }} />
               <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.3rem' }}>Ready to Search</div>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Enter your pickup and destination in Tamil Nadu to query live MongoDB drivers within radius. Points will appear on the map after searching.
+                Enter your pickup and destination to find available carpools along your route.
               </p>
             </div>
           ) : (

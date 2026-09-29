@@ -100,10 +100,10 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)' }}>
-            User Dashboard & Verified Telemetry
+            User Dashboard & Profile
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Live MongoDB driver routes, separate ratings, and ₹10/km cost-split telemetry in Tamil Nadu.
+            Manage your rides, view your commuter ratings, and track shared journey details.
           </p>
         </div>
 
@@ -183,7 +183,7 @@ export default function Dashboard({ kycUser, onOpenKyc }) {
               Active Scheduled Pools in Tamil Nadu
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Live rides fetched dynamically from MongoDB. Rate is strictly <b>₹10 per km</b>.
+              Available carpools in Tamil Nadu. Transparent fixed rate of <b>₹10 per km</b>.
             </p>
           </div>
         </div>

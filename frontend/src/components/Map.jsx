@@ -307,7 +307,7 @@ export default function Map({ origin, destination, matches = [], hasRequested = 
         zIndex: 1
       }}>
         <ShieldCheck size={14} />
-        <span>Tamil Nadu Service Corridor (Strict Geo-Constraint)</span>
+        <span>Tamil Nadu Service Network</span>
       </div>
 
       {/* Map Legend: Drivers (Red) vs Seeker (Green) */}
@@ -339,7 +339,7 @@ export default function Map({ origin, destination, matches = [], hasRequested = 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', fontWeight: 600 }}>
             <Navigation size={16} color="var(--primary)" />
-            <span>{matches.length} active driver corridors matching seeker request</span>
+            <span>{matches.length} matching driver routes found</span>
           </div>
           <span className="badge-score" style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>
             🔴 {matches.length} Drivers Live

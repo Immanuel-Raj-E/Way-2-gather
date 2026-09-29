@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { rideService } from '../services/api';
 import LocationAutocomplete from '../components/LocationAutocomplete';
 import Button from '../components/Button';
@@ -182,7 +182,7 @@ export default function CreateRide({ kycUser, onOpenKyc }) {
 
             <Button type="submit" variant="primary" disabled={loading} style={{ marginTop: '0.5rem' }}>
               <Navigation size={18} />
-              {loading ? 'Publishing to MongoDB...' : 'Publish Ride to Live Network'}
+              {loading ? 'Publishing Ride...' : 'Offer Ride'}
             </Button>
           </form>
         )}

@@ -173,9 +173,9 @@ export default function LiveRideTracker({ activeRide, activeRequest, onComplete 
             <Car size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Ride Handshake & Live Telemetry</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Live Trip & Route Tracking</h3>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Host-Seeker WebSocket Channel: <code>ride_{rideId}</code>
+              Ride Identifier: <code>ride_{rideId}</code>
             </div>
           </div>
         </div>

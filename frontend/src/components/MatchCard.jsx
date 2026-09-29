@@ -46,10 +46,10 @@ export default function MatchCard({ match, onRequest, isRequested }) {
         <div style={{ textAlign: 'right' }}>
           <span className="badge-score">
             <Sparkles size={14} />
-            {prob}% Acceptance
+            {prob}% Match
           </span>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-            XGBoost Inference
+            High Compatibility
           </div>
         </div>
       </div>
@@ -95,7 +95,7 @@ export default function MatchCard({ match, onRequest, isRequested }) {
           }}
         >
           <Cpu size={13} color="var(--primary)" />
-          <span>{showFeatures ? 'Hide XGBoost Vector' : 'View 6D Feature Vector'}</span>
+          <span>{showFeatures ? 'Hide Route Details' : 'View Route Compatibility Details'}</span>
           {showFeatures ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
 

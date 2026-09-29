@@ -66,19 +66,19 @@ export default function Home() {
           border: '1px solid rgba(99, 102, 241, 0.35)', color: 'var(--primary-light)',
           fontSize: '0.85rem', fontWeight: 700, marginBottom: '1rem'
         }}>
-          <Cpu size={15} /> Microservice Carpooling Architecture (Node + FastAPI + XGBoost)
+          <Car size={15} /> Peer-to-Peer Carpooling Network in Tamil Nadu
         </div>
         <h1 style={{ fontSize: '2.6rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '0.8rem', letterSpacing: '-0.02em' }}>
-          Predictive Ride-Pooling with <br />
+          Smart Ride-Pooling with <br />
           <span style={{
             background: 'linear-gradient(135deg, #818cf8 0%, #06b6d4 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
           }}>
-            AI Match Acceptance & Live Safety Corridor
+            AI Route Matching & Live Safety Tracking
           </span>
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', maxWidth: '720px', margin: '0 auto' }}>
-          Instant Mongo hard-filtering, 6-feature vector geospatial calculations, XGBoost acceptance scoring, WebSocket handshakes with OTP locks, and live GPS deviation alerts.
+          Affordable ₹10/km commuter rides, smart route matching, verified identity handshakes, and real-time safety corridor tracking.
         </p>
       </div>
 
@@ -181,7 +181,7 @@ export default function Home() {
               <Compass size={44} color="var(--text-muted)" style={{ margin: '0 auto 1rem' }} />
               <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>No active search query</div>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Click "Match Rides" to trigger the Node MongoDB hard-filtering and the Python FastAPI XGBoost scoring engine.
+                Search for available carpools along your route to see matching drivers.
               </p>
             </div>
           ) : (

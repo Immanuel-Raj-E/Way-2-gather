@@ -94,7 +94,7 @@ export default function KYCModal({ isOpen, onClose, onVerified, initialData = {}
             <CheckCircle2 size={56} color="var(--accent-green)" style={{ margin: '0 auto 1rem' }} />
             <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '0.5rem' }}>KYC Verified Successfully!</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.2rem' }}>
-              Your government ID has been authenticated with SHA-256 cryptographic hashing.
+              Your identity has been securely verified and protected.
             </p>
 
             <div style={{
@@ -242,7 +242,7 @@ export default function KYCModal({ isOpen, onClose, onVerified, initialData = {}
             }}>
               <Lock size={15} color="var(--primary-light)" />
               <span>
-                <b>SHA-256 Cryptographic Hash Protection:</b> Your raw 12-digit number is never stored in plain text.
+                <b>Privacy & Data Protection:</b> Your government ID number is securely encrypted and never shared in plain text.
               </span>
             </div>
 
