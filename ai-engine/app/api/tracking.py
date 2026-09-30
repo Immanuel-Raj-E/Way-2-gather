@@ -5,6 +5,7 @@ from app.core.tracking import check_route_deviation
 
 router = APIRouter()
 
+
 class Coordinate(BaseModel):
     latitude: float
     longitude: float

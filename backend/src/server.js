@@ -138,10 +138,10 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/syncride';
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 });
     console.log('[way-2-gather Backend]: Connected to MongoDB successfully.');
   } catch (err) {
-    console.warn('[way-2-gather Backend]: MongoDB connection skipped/offline. Running in-memory.');
+    console.warn('[way-2-gather Backend]: MongoDB connection skipped/offline. Running with fallback.');
   }
 
   server.listen(PORT, () => {

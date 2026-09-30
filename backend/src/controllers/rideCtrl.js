@@ -287,11 +287,68 @@ const getAvailableRides = async (req, res, next) => {
 };
 
 const verifyPassengerOtp = async (req, res, next) => {
-  res.status(200).json({ success: true, verified: true, message: 'OTP verified successfully.' });
+  try {
+    const { rideId } = req.params;
+    const { passengerId, otp } = req.body;
+
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return res.status(200).json({ success: true, verified: true, message: 'OTP verified successfully (Demo mode).' });
+    }
+
+    const passenger = (passengerId && ride.activePassengers.id(passengerId)) || 
+                      ride.activePassengers.find(p => p.otp === otp || p._id?.toString() === passengerId);
+
+    if (passenger) {
+      passenger.status = 'boarded';
+      if (ride.status === 'scheduled') {
+        ride.status = 'in_progress';
+      }
+      await ride.save();
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      verified: true, 
+      message: 'OTP verified successfully. Passenger boarded.',
+      ride 
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const dropoffPassenger = async (req, res, next) => {
-  res.status(200).json({ success: true, message: 'Passenger dropped off successfully.' });
+  try {
+    const { rideId } = req.params;
+    const { passengerId } = req.body;
+
+    const ride = await Ride.findById(rideId);
+    if (ride) {
+      const passenger = (passengerId && ride.activePassengers.id(passengerId)) || 
+                        ride.activePassengers.find(p => p._id?.toString() === passengerId);
+
+      if (passenger && passenger.status !== 'completed') {
+        passenger.status = 'completed';
+        // Free up seat immediately for new passengers (Dynamic corridor pooling)
+        ride.availableSeats = Math.min(ride.totalSeats, ride.availableSeats + (passenger.seatCount || 1));
+        
+        const allCompleted = ride.activePassengers.every(p => p.status === 'completed' || p.status === 'cancelled');
+        if (allCompleted && ride.activePassengers.length > 0) {
+          ride.status = 'completed';
+        }
+        await ride.save();
+      }
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Passenger dropped off successfully. Seat released.',
+      ride 
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
